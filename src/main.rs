@@ -10,10 +10,7 @@ mod ui;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-    if args.command.is_some() {
-        return Ok(());
-    }
+    let _ = Args::parse();
 
     App::run()?;
     Ok(())

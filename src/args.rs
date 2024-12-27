@@ -1,9 +1,5 @@
-use clap::{Parser, arg};
+use clap::Parser;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-pub struct Args {
-    /// The command whose man page to view.
-    #[arg(short, long)]
-    pub command: Option<String>,
-}
+pub struct Args {}

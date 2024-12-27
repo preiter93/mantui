@@ -33,6 +33,7 @@ macro_rules! select_section {
         if $state.section_list.selected != Some($section) {
             $state.commands = None;
             $state.section_list.select(Some($section));
+            $state.command_list.select(None);
             $ctx.selected_section = $section;
             load_commands_in_background($ctx, $section);
         }

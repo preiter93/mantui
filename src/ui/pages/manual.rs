@@ -1,13 +1,10 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss, clippy::cast_precision_loss)]
-use std::{cmp::min, time::Duration};
+use std::cmp::min;
 
 use crate::{
     core::get_manual,
-    ui::{
-        app::{AppContext, poll_commands},
-        theme::get_theme,
-    },
+    ui::{app::AppContext, theme::get_theme},
 };
 use ansi_to_tui::IntoText;
 use ratatui::{
@@ -63,9 +60,8 @@ impl ManPageState {
                     state.scroll_pos = 0;
                 }
                 KeyCode::Esc => {
-                    let commands = poll_commands(Duration::from_millis(1000));
                     drop_page(ctx);
-                    ctx.current_page = Page::List(ListPageState::new(ctx, commands));
+                    ctx.current_page = Page::List(ListPageState::new(ctx));
                 }
                 _ => {}
             }

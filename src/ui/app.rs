@@ -2,16 +2,13 @@ use anyhow::Result;
 use ratatui::prelude::*;
 use std::{
     marker::PhantomData,
-    sync::OnceLock,
-    thread::{self, sleep},
-    time::Instant,
+    thread::{self},
 };
-use tachyonfx::Duration;
 
 use crate::core::list_user_commands;
 
 use super::{
-    events::{EventHandler, EventNotifier},
+    events::{Event, EventHandler, EventNotifier, InternalEvent},
     pages::{HomePage, HomePageState, ListPage, ManPage, Page},
     terminal::Terminal,
 };
@@ -28,6 +25,7 @@ pub(super) struct AppContext {
     pub(super) notifier: EventNotifier,
     pub(super) search: String,
     pub(super) selected_index: Option<usize>,
+    pub(super) commands: Option<Vec<String>>,
 }
 
 impl AppContext {
@@ -38,6 +36,7 @@ impl AppContext {
             notifier: EventNotifier::default(),
             search: String::new(),
             selected_index: None,
+            commands: None,
         }
     }
 }
@@ -47,11 +46,12 @@ impl App<'_> {
     pub fn new() -> App<'static> {
         // The commands take some time to load, thus we load
         // them in the background as soon as the app starts.
-        init_commands();
+        let events = EventHandler::new(100);
+        load_commands(&events);
 
         App {
             ctx: AppContext::new(),
-            events: EventHandler::new(100),
+            events,
             _phantom: PhantomData,
         }
     }
@@ -97,26 +97,10 @@ impl Widget for &mut App<'_> {
     }
 }
 
-pub(super) static MAN_COMMANDS: OnceLock<Vec<String>> = OnceLock::new();
-
-fn init_commands() {
+fn load_commands(events: &EventHandler) {
+    let sx1 = events.sx.clone();
     thread::spawn(move || {
-        MAN_COMMANDS
-            .set(list_user_commands().unwrap_or_default())
-            .expect("COMMAND's are already initialized");
+        let commands = list_user_commands().unwrap_or_default();
+        let _ = sx1.send(Event::Internal(InternalEvent::Loaded(commands)));
     });
-}
-
-pub(super) fn poll_commands(timeout: Duration) -> Vec<String> {
-    let start = Instant::now();
-    let delay = Duration::from_millis(200);
-
-    while start - Instant::now() < timeout {
-        if let Some(commands) = MAN_COMMANDS.get() {
-            return commands.clone();
-        }
-        sleep(delay);
-    }
-
-    Vec::new()
 }

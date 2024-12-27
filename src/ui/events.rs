@@ -10,7 +10,15 @@ use std::{
 use ratatui::crossterm::event::{self, Event as CTEvent, KeyModifiers};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 
-use super::app::AppContext;
+use super::{app::AppContext, pages::Page};
+
+/// Internal events.
+#[derive(Debug, Default)]
+pub enum InternalEvent {
+    #[default]
+    None,
+    Loaded(Vec<String>),
+}
 
 /// App events.
 #[derive(Debug)]
@@ -20,13 +28,16 @@ pub enum Event {
 
     /// Key event.
     Key(KeyEvent),
+
+    /// Internal event.
+    Internal(InternalEvent),
 }
 
 #[allow(dead_code)]
 /// An event handler.
-pub struct EventHandler {
+pub(crate) struct EventHandler {
     /// Event sender channel.
-    sx: mpsc::Sender<Event>,
+    pub(crate) sx: mpsc::Sender<Event>,
 
     /// Event receiver channel.
     rx: mpsc::Receiver<Event>,
@@ -71,7 +82,6 @@ impl EventHandler {
 
     pub fn handle(&self, ctx: &mut AppContext) -> Result<()> {
         match self.next()? {
-            Event::Tick => {}
             Event::Key(key) => {
                 // Always quit on <ctrl-c>.
                 if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
@@ -83,6 +93,15 @@ impl EventHandler {
                 let notifier = ctx.notifier.clone();
                 notifier.notify_listener(ctx, key);
             }
+            Event::Internal(event) => {
+                if let InternalEvent::Loaded(commands) = event {
+                    ctx.commands = Some(commands.clone());
+                    if let Page::List(state) = &mut ctx.current_page {
+                        state.commands = Some(commands);
+                    }
+                }
+            }
+            Event::Tick => {}
         }
 
         Ok(())

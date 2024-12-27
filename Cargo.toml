@@ -13,3 +13,4 @@ tachyonfx = { version = "0.10", features = ["std-duration"] }
 tui-widget-list = { version = "0.13", path = "../tui-widget-list" }
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
 ansi-to-tui = "7.0.0"
+throbber-widgets-tui = "0.8.0"

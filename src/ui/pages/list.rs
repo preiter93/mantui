@@ -13,7 +13,7 @@ pub(crate) struct ListPage {}
 
 #[derive(Default)]
 pub(crate) struct ListPageState {
-    commands: Vec<String>,
+    pub(crate) commands: Option<Vec<String>>,
     list: ListState,
     num_elements: u16,
     search_active: bool,
@@ -22,14 +22,14 @@ pub(crate) struct ListPageState {
 }
 
 impl ListPageState {
-    pub(crate) fn new(ctx: &mut AppContext, commands: Vec<String>) -> Self {
+    pub(crate) fn new(ctx: &mut AppContext) -> Self {
         Self::on_mount(ctx);
 
         let mut list = ListState::default();
         list.select(ctx.selected_index);
 
         Self {
-            commands,
+            commands: ctx.commands.clone(),
             list,
             num_elements: 0,
             search_active: false,
@@ -38,18 +38,26 @@ impl ListPageState {
         }
     }
 
-    fn filtered_commands(&self) -> Vec<String> {
-        self.commands
+    fn filtered_commands(&self) -> Option<Vec<String>> {
+        let Some(commands) = &self.commands else {
+            return None;
+        };
+
+        let filtered = commands
             .iter()
             .filter(|x| x.to_lowercase().contains(&self.search.to_lowercase()))
             .cloned()
-            .collect()
+            .collect();
+
+        Some(filtered)
     }
 
     fn selected_commands(&self) -> Option<String> {
-        self.list
-            .selected
-            .map(|selected| self.filtered_commands()[selected].clone())
+        let Some(commands) = &self.filtered_commands() else {
+            return None;
+        };
+
+        self.list.selected.map(|i| commands[i].clone())
     }
 
     pub(crate) fn on_mount(ctx: &mut AppContext) {
@@ -169,6 +177,11 @@ impl StatefulWidget for CommandList {
         state.num_elements = area.height;
 
         let commands = state.filtered_commands();
+        let Some(commands) = commands else {
+            // TODO: Show throbber
+            Line::from("Loading ...").render(area, buf);
+            return;
+        };
 
         let builder = ListBuilder::new(|context| {
             let command = commands[context.index].clone();

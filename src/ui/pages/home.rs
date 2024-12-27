@@ -1,15 +1,12 @@
 use super::{ListPageState, Page, drop_page, utils::centered_rect};
-use crate::ui::{
-    app::{AppContext, poll_commands},
-    theme::get_theme,
-};
+use crate::ui::{app::AppContext, theme::get_theme};
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     prelude::*,
     widgets::Paragraph,
 };
 use std::time::Instant;
-use tachyonfx::{Duration, Effect, EffectTimer, Interpolation, Shader, fx};
+use tachyonfx::{Effect, EffectTimer, Interpolation, Shader, fx};
 
 #[derive(Default)]
 pub(crate) struct HomePage {}
@@ -35,9 +32,8 @@ impl HomePageState {
     pub(crate) fn on_mount(ctx: &mut AppContext) {
         ctx.notifier.listen("home", |(ctx, key)| {
             if key == KeyEvent::from(KeyCode::Enter) {
-                let commands = poll_commands(Duration::from_millis(1000));
                 drop_page(ctx);
-                ctx.current_page = Page::List(ListPageState::new(ctx, commands));
+                ctx.current_page = Page::List(ListPageState::new(ctx));
             }
         });
     }

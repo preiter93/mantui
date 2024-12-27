@@ -4,11 +4,11 @@ use std::{collections::HashSet, process::Command};
 pub(super) struct ManLister;
 
 impl ManLister {
-    pub(super) fn user_commands(section: usize) -> Result<Vec<String>> {
+    pub(super) fn section(section: String) -> Result<Vec<String>> {
         let output = Command::new("man")
             .arg("-k")
             .arg("-S")
-            .arg(format!("{section}"))
+            .arg(section)
             .arg(".")
             .output()
             .expect("Failed to execute `man -k .`");
@@ -34,7 +34,7 @@ impl ManLister {
                 }) && !cmd.starts_with("Yet another")
                     && !cmd.starts_with("Other_name")
             })
-            .map(|cmd| cmd.trim())
+            .map(str::trim)
             .map(String::from)
             .collect();
 

@@ -17,7 +17,7 @@ use super::{app::AppContext, pages::Page};
 pub enum InternalEvent {
     #[default]
     None,
-    Loaded(Vec<String>),
+    Loaded((Vec<String>, usize)),
 }
 
 /// App events.
@@ -99,10 +99,12 @@ impl EventHandler {
                 // After they are loaded, we assign them to the
                 // global AppContext state. And we must also
                 // update the command page, if it is open.
-                if let InternalEvent::Loaded(commands) = event {
-                    ctx.commands = Some(commands.clone());
-                    if let Page::List(state) = &mut ctx.current_page {
-                        state.commands = Some(commands);
+                if let InternalEvent::Loaded((commands, section)) = event {
+                    if ctx.selected_section == section {
+                        ctx.commands = Some(commands.clone());
+                        if let Page::List(state) = &mut ctx.current_page {
+                            state.commands = Some(commands);
+                        }
                     }
                 }
             }

@@ -2,10 +2,13 @@ use anyhow::Result;
 use ratatui::prelude::*;
 use std::{
     marker::PhantomData,
+    sync::{Arc, Mutex, mpsc},
     thread::{self},
+    time::Duration,
 };
+use uuid::Uuid;
 
-use crate::core::list_user_commands;
+use crate::core::load_section;
 
 use super::{
     events::{Event, EventHandler, EventNotifier, InternalEvent},
@@ -24,19 +27,25 @@ pub(super) struct AppContext {
     pub(super) current_page: Page,
     pub(super) notifier: EventNotifier,
     pub(super) search: String,
-    pub(super) selected_index: Option<usize>,
+    pub(super) selected_command: Option<usize>,
+    pub(super) selected_section: usize,
     pub(super) commands: Option<Vec<String>>,
+    pub(crate) sx: mpsc::Sender<Event>,
+    debouncer: Arc<Mutex<Uuid>>,
 }
 
 impl AppContext {
-    fn new() -> Self {
+    fn new(sx: mpsc::Sender<Event>) -> Self {
         Self {
             current_page: Page::None,
             should_quit: false,
             notifier: EventNotifier::default(),
             search: String::new(),
-            selected_index: None,
+            selected_command: None,
+            selected_section: 0,
             commands: None,
+            sx,
+            debouncer: Arc::new(Mutex::new(Uuid::new_v4())),
         }
     }
 }
@@ -44,13 +53,15 @@ impl AppContext {
 impl App<'_> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn new() -> App<'static> {
-        // The commands take some time to load, thus we load
-        // them in the background as soon as the app starts.
         let events = EventHandler::new(100);
-        load_commands(&events);
+        let ctx = AppContext::new(events.sx.clone());
+
+        // Loading the man commands takes some time,
+        // thuse they are loaded in the background.
+        load_commands_in_background(&ctx, 0);
 
         App {
-            ctx: AppContext::new(),
+            ctx,
             events,
             _phantom: PhantomData,
         }
@@ -62,8 +73,6 @@ impl App<'_> {
 
         let state = HomePageState::new(&mut app.ctx);
         app.ctx.current_page = Page::Home(state);
-        // let state = DescPageState::new(&mut app.ctx, "grep", 50);
-        // app.ctx.current_page = Page::Desc(state);
 
         while !app.ctx.should_quit {
             terminal.draw(|frame| {
@@ -97,10 +106,39 @@ impl Widget for &mut App<'_> {
     }
 }
 
-fn load_commands(events: &EventHandler) {
-    let sx1 = events.sx.clone();
+pub(crate) fn load_commands_in_background(ctx: &AppContext, section: usize) {
+    let uuid = Uuid::new_v4();
+
+    let sx1 = ctx.sx.clone();
+
+    let section_str = (section + 1).to_string();
+
+    let debouncer_clone = ctx.debouncer.clone();
+    let debounce_time = Duration::from_millis(200);
+
     thread::spawn(move || {
-        let commands = list_user_commands().unwrap_or_default();
-        let _ = sx1.send(Event::Internal(InternalEvent::Loaded(commands)));
+        {
+            let mut last_uuid = debouncer_clone.lock().unwrap();
+            *last_uuid = uuid;
+        }
+
+        // Sleep for a short time to await new requests
+        thread::sleep(debounce_time);
+
+        // Only proceed if the last called uuid matches with
+        // the uuid of this process.
+        {
+            let last_uuid = debouncer_clone.lock().unwrap();
+            if *last_uuid != uuid {
+                return;
+            }
+        }
+
+        // Load the commands after the debounce check
+        let commands = load_section(section_str).unwrap_or_default();
+
+        // Send the result
+        let event = InternalEvent::Loaded((commands, section));
+        let _ = sx1.send(Event::Internal(event));
     });
 }

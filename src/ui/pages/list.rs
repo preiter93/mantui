@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Widget};
@@ -5,7 +7,7 @@ use tachyonfx::CenteredShrink;
 use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
-use crate::ui::app::AppContext;
+use crate::ui::app::{AppContext, load_commands_in_background};
 use crate::ui::theme::get_theme;
 
 use super::{ManPageState, Page, drop_page};
@@ -16,26 +18,44 @@ pub(crate) struct ListPage {}
 #[derive(Default)]
 pub(crate) struct ListPageState {
     pub(crate) commands: Option<Vec<String>>,
-    list: ListState,
+    command_list: ListState,
+    section_list: ListState,
     num_elements: u16,
     search_active: bool,
     search: String,
     page_width: usize,
     throbber: ThrobberState,
+    section_active: bool,
+}
+
+macro_rules! select_section {
+    ($state:expr, $ctx:expr, $section:expr) => {
+        if $state.section_list.selected != Some($section) {
+            $state.commands = None;
+            $state.section_list.select(Some($section));
+            $ctx.selected_section = $section;
+            load_commands_in_background($ctx, $section);
+        }
+    };
 }
 
 impl ListPageState {
     pub(crate) fn new(ctx: &mut AppContext) -> Self {
         Self::on_mount(ctx);
 
-        let mut list = ListState::default();
-        list.select(ctx.selected_index);
+        let mut command_list = ListState::default();
+        command_list.select(ctx.selected_command);
+
+        let mut section_list = ListState::default();
+        section_list.select(Some(ctx.selected_section));
 
         Self {
             commands: ctx.commands.clone(),
-            list,
+            command_list,
+            section_list,
             num_elements: 0,
             search_active: false,
+            section_active: false,
             search: ctx.search.clone(),
             page_width: 0,
             throbber: ThrobberState::default(),
@@ -61,7 +81,7 @@ impl ListPageState {
             return None;
         };
 
-        self.list.selected.map(|i| commands[i].clone())
+        self.command_list.selected.map(|i| commands[i].clone())
     }
 
     pub(crate) fn on_mount(ctx: &mut AppContext) {
@@ -72,29 +92,74 @@ impl ListPageState {
 
             match key.code {
                 KeyCode::Char('j') if !state.search_active => {
-                    state.list.next();
+                    if state.section_active {
+                        let s = min(state.section_list.selected.unwrap() + 1, 8);
+                        select_section!(state, ctx, s);
+                    } else {
+                        state.command_list.next();
+                    }
                 }
                 KeyCode::Char('k') if !state.search_active => {
-                    state.list.previous();
+                    if state.section_active {
+                        let s = state.section_list.selected.unwrap().saturating_sub(1);
+                        select_section!(state, ctx, s);
+                    } else {
+                        state.command_list.previous();
+                    }
                 }
+                // KeyCode::Char('h') | KeyCode::Char('l') if !state.search_active => {
+                //     state.section_active = !state.section_active;
+                // }
                 KeyCode::Char('d')
                     if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
                 {
                     for _ in 0..state.num_elements / 2 {
-                        state.list.next();
+                        state.command_list.next();
                     }
                 }
                 KeyCode::Char('u')
                     if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
                 {
                     for _ in 0..state.num_elements / 2 {
-                        state.list.previous();
+                        state.command_list.previous();
                     }
                 }
+                KeyCode::Char('1') if !state.search_active => {
+                    select_section!(state, ctx, 0);
+                }
+                KeyCode::Char('2') if !state.search_active => {
+                    select_section!(state, ctx, 1);
+                }
+                KeyCode::Char('3') if !state.search_active => {
+                    select_section!(state, ctx, 2);
+                }
+                KeyCode::Char('4') if !state.search_active => {
+                    select_section!(state, ctx, 3);
+                }
+                KeyCode::Char('5') if !state.search_active => {
+                    select_section!(state, ctx, 4);
+                }
+                KeyCode::Char('6') if !state.search_active => {
+                    select_section!(state, ctx, 5);
+                }
+                KeyCode::Char('7') if !state.search_active => {
+                    select_section!(state, ctx, 6);
+                }
+                KeyCode::Char('8') if !state.search_active => {
+                    select_section!(state, ctx, 7);
+                }
+                KeyCode::Char('9') if !state.search_active => {
+                    select_section!(state, ctx, 8);
+                }
                 KeyCode::Enter if !state.search_active => {
+                    if state.section_active {
+                        state.section_active = false;
+                        return;
+                    }
+
                     if let Some(command) = state.selected_commands() {
                         ctx.search = state.search.clone();
-                        ctx.selected_index = state.list.selected;
+                        ctx.selected_command = state.command_list.selected;
 
                         let width = state.page_width;
                         drop_page(ctx);
@@ -103,7 +168,7 @@ impl ListPageState {
                 }
                 KeyCode::Char('/') if !state.search_active => {
                     state.search_active = true;
-                    state.list.selected = None;
+                    state.command_list.selected = None;
                 }
                 KeyCode::Esc | KeyCode::Enter if state.search_active => {
                     state.search_active = false;
@@ -129,26 +194,48 @@ impl StatefulWidget for ListPage {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
+        state.page_width = area.width as usize;
 
-        let [list, search] = Layout::default()
+        let [main, search] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .areas(area);
+        let [commands, sections] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Min(0), Constraint::Length(27)])
+            .areas(main);
 
-        let block_style = if state.search_active {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded);
+
+        let command_block_style = if state.search_active || state.section_active {
             theme.block.inactive
         } else {
             theme.block.active
         };
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .border_type(ratatui::widgets::BorderType::Rounded)
-            .style(block_style);
-        let inner = block.inner(list);
-        block.render(list, buf);
+        let command_list = CommandList {
+            block: block.clone().style(command_block_style),
+        };
+        command_list.render(commands, buf, state);
 
-        let command_list = CommandList;
-        command_list.render(inner, buf, state);
+        let section_block_style = if state.section_active {
+            theme.block.active
+        } else {
+            theme.block.inactive
+        };
+
+        let section_list = SectionList {
+            block: Some(block.style(section_block_style)),
+        };
+        section_list.render(
+            sections.inner(Margin {
+                horizontal: 0,
+                vertical: 0,
+            }),
+            buf,
+            state,
+        );
 
         let style = if state.search_active {
             theme.search.active
@@ -165,18 +252,24 @@ impl StatefulWidget for ListPage {
         }
 
         Line::from(spans).render(search, buf);
-
-        state.page_width = inner.width as usize;
     }
 }
 
-struct CommandList;
+struct CommandList<'a> {
+    block: Block<'a>,
+}
 
-impl StatefulWidget for CommandList {
+impl StatefulWidget for CommandList<'_> {
     type State = ListPageState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
+
+        let area = {
+            let inner = self.block.inner(area);
+            self.block.render(area, buf);
+            inner
+        };
 
         state.num_elements = area.height;
 
@@ -225,6 +318,55 @@ impl StatefulWidget for CommandList {
         ListView::new(builder, commands.len())
             .scroll_padding(2)
             .infinite_scrolling(false)
-            .render(area, buf, &mut state.list);
+            .render(area, buf, &mut state.command_list);
+    }
+}
+
+struct SectionList<'a> {
+    block: Option<Block<'a>>,
+}
+
+impl StatefulWidget for SectionList<'_> {
+    type State = ListPageState;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let theme = get_theme();
+
+        let mut area = area;
+        if let Some(block) = self.block {
+            let inner = block.inner(area);
+            block.render(area, buf);
+            area = inner;
+        }
+
+        let sections = [
+            "(1) User commands",
+            "(2) System calls",
+            "(3) Library calls",
+            "(4) Special files",
+            "(5) File formats",
+            "(6) Games",
+            "(7) Miscellaneous",
+            "(8) System management",
+            "(9) Kernel routines",
+        ];
+
+        let builder = ListBuilder::new(|context| {
+            let section = sections[context.index];
+
+            let mut line = Line::from(section);
+
+            if context.is_selected {
+                line = line.style(theme.list.even);
+            } else {
+                line = line.style(theme.list.inactive);
+            }
+
+            (line, 1)
+        });
+
+        ListView::new(builder, sections.len())
+            .infinite_scrolling(false)
+            .render(area, buf, &mut state.section_list);
     }
 }

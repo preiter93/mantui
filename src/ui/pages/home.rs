@@ -1,40 +1,49 @@
-use super::{ManPageState, Page, switch_page, utils::centered_rect};
-use crate::ui::{app::AppContext, debug::log_to_file, events::EventHandler, theme::get_theme};
+use super::{ListPageState, Page, drop_page, utils::centered_rect};
+use crate::{
+    core::list_user_commands,
+    ui::{
+        app::{AppContext, MAN_COMMANDS, poll_commands},
+        debug::log_to_file,
+        events::EventHandler,
+        theme::get_theme,
+    },
+};
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     prelude::*,
     widgets::Paragraph,
 };
-use std::{collections::HashMap, marker::PhantomData, time::Instant};
-use tachyonfx::{Duration, Effect, Shader, fx};
+use std::{collections::HashMap, marker::PhantomData, thread, time::Instant};
+use tachyonfx::{Duration, Effect, EffectTimer, Interpolation, Motion, Shader, fx};
 
 #[derive(Default)]
 pub(crate) struct HomePage {}
 
 pub(crate) struct HomePageState {
-    title_effect: Effect,
+    intro_effect: Effect,
     last_frame: Instant,
 }
 
 impl HomePageState {
-    pub(crate) fn new(ctx: &mut AppContext, events: &mut EventHandler) -> Self {
+    pub(crate) fn new(ctx: &mut AppContext) -> Self {
         let theme = get_theme();
-        let duration = Duration::from_millis(1000);
         let bg = theme.base.bg.unwrap_or_default();
 
-        Self::on_mount(ctx, events);
+        Self::on_mount(ctx);
 
         Self {
-            title_effect: fx::fade_from_fg(bg, duration),
+            intro_effect: fx::fade_from_fg(bg, EffectTimer::from_ms(1000, Interpolation::Linear)),
             last_frame: Instant::now(),
         }
     }
 
-    pub(crate) fn on_mount(ctx: &mut AppContext, events: &mut EventHandler) {
+    pub(crate) fn on_mount(ctx: &mut AppContext) {
         ctx.register
-            .register_event(KeyEvent::from(KeyCode::Enter), |ctx| {
-                let state = ManPageState::new(ctx);
-                switch_page(ctx, Page::Man(state));
+            .register_event(KeyEvent::from(KeyCode::Enter), |(ctx, _)| {
+                let commands = poll_commands(Duration::from_millis(1000));
+
+                drop_page(ctx);
+                ctx.current_page = Page::List(ListPageState::new(ctx, commands));
             });
     }
 
@@ -67,7 +76,7 @@ impl StatefulWidget for HomePage {
             .style(theme.base)
             .render(title, buf);
 
-        if state.title_effect.done() {
+        if state.intro_effect.done() {
             let description = "Search and Browse Man Pages";
 
             Paragraph::new(description)
@@ -76,7 +85,7 @@ impl StatefulWidget for HomePage {
                 .render(subtitle, buf);
         } else {
             let frame_duration = state.last_frame.elapsed();
-            state.title_effect.process(frame_duration, buf, title);
+            state.intro_effect.process(frame_duration, buf, title);
         }
 
         state.last_frame = Instant::now();

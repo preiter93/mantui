@@ -81,9 +81,16 @@ impl EventHandler {
                 }
 
                 // Check for registered key events.
-                if let Some(callback) = ctx.register.get_event(&key) {
-                    (callback)(ctx);
+                if let Some(callback) = ctx.register.get_event(key) {
+                    (callback)((ctx, key));
                 }
+                if let Some(callback) = ctx.register.get_event(RegisterEvent::All) {
+                    (callback)((ctx, key));
+                }
+                // if let Some(callback) = &ctx.register.capture_all {
+                //     let callback = Rc::clone(callback);
+                //     (callback)(ctx);
+                // }
             }
         }
 
@@ -91,30 +98,59 @@ impl EventHandler {
     }
 }
 
-type KeyEventCallback = dyn Fn(&mut AppContext) + 'static;
+type KeyEventCallback = dyn Fn((&mut AppContext, KeyEvent)) + 'static;
 
 // An event register.
 #[derive(Default)]
 pub struct EventRegister {
-    register: HashMap<KeyEvent, Rc<KeyEventCallback>>,
+    register: HashMap<RegisterEvent, Rc<KeyEventCallback>>,
+    capture_all: Option<Rc<KeyEventCallback>>,
+}
+
+#[derive(Default, Eq, PartialEq, Hash)]
+pub(super) enum RegisterEvent {
+    #[default]
+    All,
+    KeyEvent(KeyEvent),
+}
+
+impl From<KeyEvent> for RegisterEvent {
+    fn from(value: KeyEvent) -> Self {
+        Self::KeyEvent(value)
+    }
 }
 
 impl EventRegister {
     /// Register a new key event.
-    pub(crate) fn register_event<C>(&mut self, event: KeyEvent, callback: C)
+    pub(crate) fn register_event<T, C>(&mut self, event: T, callback: C)
     where
-        C: Fn(&mut AppContext) + 'static,
+        T: Into<RegisterEvent>,
+        C: Fn((&mut AppContext, KeyEvent)) + 'static,
     {
-        self.register.insert(event, Rc::new(callback));
+        self.register.insert(event.into(), Rc::new(callback));
     }
 
+    // /// Registers a capture all callback.
+    // pub(crate) fn capture_all<C>(&mut self, callback: C)
+    // where
+    //     C: Fn(&mut AppContext) + 'static,
+    // {
+    //     self.capture_all = Some(Rc::new(callback));
+    // }
+
     /// Unregister a key event.
-    pub(crate) fn unregister_event(&mut self, event: KeyEvent) {
-        let _ = self.register.remove(&event);
+    pub(crate) fn unregister_event<T>(&mut self, event: T)
+    where
+        T: Into<RegisterEvent>,
+    {
+        let _ = self.register.remove(&event.into());
     }
 
     /// Returns a clone event callback.
-    pub(crate) fn get_event(&self, event: &KeyEvent) -> Option<Rc<KeyEventCallback>> {
-        self.register.get(event).map(Rc::clone)
+    pub(crate) fn get_event<T>(&self, event: T) -> Option<Rc<KeyEventCallback>>
+    where
+        T: Into<RegisterEvent>,
+    {
+        self.register.get(&event.into()).map(Rc::clone)
     }
 }

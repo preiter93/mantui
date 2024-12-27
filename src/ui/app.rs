@@ -1,12 +1,23 @@
 use anyhow::Result;
 use ratatui::{crossterm::event::KeyEvent, prelude::*};
-use std::{error::Error, marker::PhantomData, time::Instant};
+use std::{
+    error::Error,
+    marker::PhantomData,
+    sync::OnceLock,
+    thread::{self, sleep},
+    time::Instant,
+};
 use tachyonfx::{Duration, Effect, EffectRenderer, Shader, fx};
+
+use crate::core::list_user_commands;
 
 use super::{
     debug::log_to_file,
     events::{Event, EventHandler, EventRegister},
-    pages::{HomePage, HomePageState, ManPage, Page},
+    pages::{
+        HomePage, HomePageState, ListPage, Page,
+        desc::{DescPage, DescPageState},
+    },
     terminal::Terminal,
     theme::get_theme,
 };
@@ -36,6 +47,10 @@ impl AppContext {
 impl App<'_> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn new() -> App<'static> {
+        // The commands take some time to load, thus we load
+        // them in the background as soon as the app starts.
+        init_commands();
+
         App {
             ctx: AppContext::new(),
             events: EventHandler::new(100),
@@ -47,8 +62,10 @@ impl App<'_> {
         let mut terminal = Terminal::new()?;
         let mut app = Self::new();
 
-        let state = HomePageState::new(&mut app.ctx, &mut app.events);
-        app.ctx.current_page = Page::Home(state);
+        // let state = HomePageState::new(&mut app.ctx);
+        // app.ctx.current_page = Page::Home(state);
+        let state = DescPageState::new(&mut app.ctx, "grep");
+        app.ctx.current_page = Page::Desc(state);
 
         while !app.ctx.should_quit {
             terminal.draw(|frame| {
@@ -69,11 +86,39 @@ impl Widget for &mut App<'_> {
                 let page = HomePage::default();
                 page.render(area, buf, state);
             }
-            Page::Man(state) => {
-                let page = ManPage::default();
+            Page::List(state) => {
+                let page = ListPage::default();
+                page.render(area, buf, state);
+            }
+            Page::Desc(state) => {
+                let page = DescPage::default();
                 page.render(area, buf, state);
             }
             Page::None => {}
         }
     }
+}
+
+pub(super) static MAN_COMMANDS: OnceLock<Vec<String>> = OnceLock::new();
+
+fn init_commands() {
+    thread::spawn(move || {
+        MAN_COMMANDS
+            .set(list_user_commands().unwrap_or_default())
+            .expect("COMMAND's are already initialized");
+    });
+}
+
+pub(super) fn poll_commands(timeout: Duration) -> Vec<String> {
+    let start = Instant::now();
+    let delay = Duration::from_millis(200);
+
+    while start - Instant::now() < timeout {
+        if let Some(commands) = MAN_COMMANDS.get() {
+            return commands.clone();
+        }
+        sleep(delay);
+    }
+
+    Vec::new()
 }

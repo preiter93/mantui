@@ -1,5 +1,5 @@
 mod app;
-mod debug;
+pub mod debug;
 mod events;
 mod pages;
 mod terminal;

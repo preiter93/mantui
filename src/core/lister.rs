@@ -1,7 +1,5 @@
-use anyhow::anyhow;
-use std::process::Command;
-
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use std::{collections::HashSet, process::Command};
 
 pub(super) struct ManLister;
 
@@ -25,10 +23,16 @@ impl ManLister {
             ));
         }
 
-        let commands = String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .map(String::from)
-            .collect();
+        let mut commands = HashSet::new();
+        for line in String::from_utf8_lossy(&output.stdout).lines() {
+            let mut split = line.split("(1)").collect::<Vec<_>>();
+            if split.len() == 2 {
+                commands.insert(split[0].to_string());
+            }
+        }
+
+        let mut commands: Vec<_> = commands.into_iter().collect();
+        commands.sort();
 
         Ok(commands)
     }

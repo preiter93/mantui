@@ -6,13 +6,14 @@ use ratatui::{
     widgets::Paragraph,
 };
 use std::time::Instant;
-use tachyonfx::{Effect, EffectTimer, Interpolation, Shader, fx};
+use tachyonfx::{CenteredShrink, Effect, EffectTimer, Interpolation, Shader, fx};
 
 #[derive(Default)]
 pub(crate) struct HomePage {}
 
 pub(crate) struct HomePageState {
     intro_effect: Effect,
+    // instr_effect: Effect,
     last_frame: Instant,
 }
 
@@ -25,6 +26,7 @@ impl HomePageState {
 
         Self {
             intro_effect: fx::fade_from_fg(bg, EffectTimer::from_ms(1000, Interpolation::Linear)),
+            // instr_effect: fx::fade_from_fg(bg, EffectTimer::from_ms(1000, Interpolation::Linear)),
             last_frame: Instant::now(),
         }
     }
@@ -77,15 +79,40 @@ impl StatefulWidget for HomePage {
             .render(subtitle, buf);
 
         if state.intro_effect.done() {
-            Line::from("Press Enter to Continue")
-                .alignment(Alignment::Center)
-                .style(theme.base)
-                .render(instruction, buf);
+            let instruction_text = InstructionText;
+            instruction_text.render(instruction.inner_centered(23, 1), buf, state);
         } else {
             let frame_duration = state.last_frame.elapsed();
             state.intro_effect.process(frame_duration, buf, main);
+            state.last_frame = Instant::now();
         }
+    }
+}
 
-        state.last_frame = Instant::now();
+struct InstructionText;
+
+impl StatefulWidget for InstructionText {
+    type State = HomePageState;
+
+    fn render(self, area: Rect, buf: &mut Buffer, _state: &mut Self::State) {
+        let theme = get_theme();
+
+        let [l, m, r] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Length(6),
+                Constraint::Length(5),
+                Constraint::Min(0),
+            ])
+            .areas(area);
+        Line::from("Press ").style(theme.base).render(l, buf);
+        Line::from("Enter").style(theme.base.bold()).render(m, buf);
+        Line::from(" to Continue").style(theme.base).render(r, buf);
+
+        // if !state.instr_effect.done() {
+        //     let frame_duration = state.last_frame.elapsed();
+        //     state.instr_effect.process(frame_duration, buf, m);
+        //     state.last_frame = Instant::now();
+        // }
     }
 }

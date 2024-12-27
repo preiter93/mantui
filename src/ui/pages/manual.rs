@@ -112,9 +112,6 @@ impl ManPageState {
 impl StatefulWidget for ManPage {
     type State = ManPageState;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        state.max_scroll_pos = state.text.height() - area.height as usize + 2;
-        state.page_height = area.height as usize;
-
         let theme = get_theme();
         let block = Block::default()
             .style(theme.base)
@@ -124,6 +121,9 @@ impl StatefulWidget for ManPage {
         let inner = block.inner(area);
         block.render(area, buf);
 
+        state.max_scroll_pos = state.text.height().saturating_sub(inner.height as usize);
+        state.page_height = area.height as usize;
+
         Paragraph::new(state.text.clone())
             .scroll((state.scroll_pos as u16, 0))
             .render(inner, buf);
@@ -131,8 +131,6 @@ impl StatefulWidget for ManPage {
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("╮"))
             .end_symbol(Some("╯"));
-        // .begin_symbol(Some("g"))
-        // .end_symbol(Some("G"));
 
         state.scrollbar = state.scrollbar.content_length(state.max_scroll_pos);
         state.scrollbar = state.scrollbar.position(state.scroll_pos);

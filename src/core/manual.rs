@@ -9,7 +9,7 @@ pub(crate) struct Manual;
 impl Manual {
     pub(super) fn fetch(command: &str, width: &str) -> Result<String> {
         let process = Command::new("man")
-            .arg(command)
+            .arg(strip_section(command))
             .env("MANWIDTH", width)
             .env("LC_ALL", "C")
             .stdout(Stdio::piped())
@@ -23,6 +23,15 @@ impl Manual {
 
         Ok(ansi)
     }
+}
+
+fn strip_section(command: &str) -> String {
+    if command.ends_with(')') {
+        if let Some(pos) = command.rfind('(') {
+            return command[..pos].to_string();
+        }
+    }
+    command.to_string()
 }
 
 const ANSI_RESET: &str = "\x1B[0m";

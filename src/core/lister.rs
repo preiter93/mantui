@@ -4,17 +4,14 @@ use std::{collections::HashSet, process::Command};
 pub(super) struct ManLister;
 
 impl ManLister {
-    pub(super) fn user_commands(search: Option<&str>) -> Result<Vec<String>> {
-        let mut command = Command::new("apropos");
-        command.arg("-s").arg("1");
-
-        if let Some(search) = search {
-            command.arg(search);
-        } else {
-            command.arg(".");
-        }
-
-        let output = command.output()?;
+    pub(super) fn user_commands(section: usize) -> Result<Vec<String>> {
+        let output = Command::new("man")
+            .arg("-k")
+            .arg("-S")
+            .arg(format!("{section}"))
+            .arg(".")
+            .output()
+            .expect("Failed to execute `man -k .`");
 
         if !output.status.success() {
             return Err(anyhow!(
@@ -23,13 +20,23 @@ impl ManLister {
             ));
         }
 
-        let mut commands = HashSet::new();
-        for line in String::from_utf8_lossy(&output.stdout).lines() {
-            let split = line.split("(1)").collect::<Vec<_>>();
-            if split.len() >= 2 {
-                commands.insert(split[0].to_string());
-            }
-        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let commands: HashSet<String> = stdout
+            .lines()
+            .filter_map(|line| line.split(" - ").next())
+            .filter_map(|line| line.split(", ").next())
+            .filter(|cmd| {
+                !cmd.starts_with(|c: char| {
+                    matches!(
+                        c,
+                        ' ' | '!' | '$' | '*' | '%' | ':' | '<' | '-' | '/' | '.' | '@' | '['
+                    )
+                }) && !cmd.starts_with("Yet another")
+                    && !cmd.starts_with("Other_name")
+            })
+            .map(|cmd| cmd.trim())
+            .map(String::from)
+            .collect();
 
         let mut commands: Vec<_> = commands.into_iter().collect();
         commands.sort();

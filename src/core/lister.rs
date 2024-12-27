@@ -25,7 +25,7 @@ impl ManLister {
 
         let mut commands = HashSet::new();
         for line in String::from_utf8_lossy(&output.stdout).lines() {
-            let mut split = line.split("(1)").collect::<Vec<_>>();
+            let split = line.split("(1)").collect::<Vec<_>>();
             if split.len() >= 2 {
                 commands.insert(split[0].to_string());
             }

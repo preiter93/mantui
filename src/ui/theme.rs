@@ -1,7 +1,6 @@
-use std::{
-    cell::OnceCell,
-    sync::{Arc, Mutex, OnceLock},
-};
+#![allow(unused)]
+use std::sync::OnceLock;
+use tachyonfx::HslConvertable;
 
 use ratatui::style::{Color, Style};
 
@@ -16,6 +15,8 @@ static THEME: OnceLock<Theme> = OnceLock::new();
 pub(super) struct Theme {
     pub(super) base: Style,
     pub(super) list: ListStyle,
+    pub(super) search: SearchStyle,
+    pub(super) block: BlockStyle,
 }
 
 impl Default for Theme {
@@ -25,17 +26,27 @@ impl Default for Theme {
             background: None,
         };
 
+        let black = Color::Black;
         let orange = Color::Rgb(255, 153, 0);
+        let yellow = Color::Rgb(255, 255, 0);
         let charcoal = Color::Rgb(28, 28, 32);
+        let gray300 = Color::from_hsl(240., 23., 80.);
+        let gray500 = Color::from_hsl(240., 10., 30.);
+        let gray700 = Color::from_hsl(240., 7., 12.);
+
+        let inactive = StyleProperties {
+            foreground: Some(gray500),
+            background: default_style.background,
+        }
+        .into();
 
         Self {
             base: default_style.into(),
             list: ListStyle {
                 even: default_style.into(),
                 odd: StyleProperties {
-                    foreground: Some(Color::White),
+                    foreground: default_style.foreground,
                     background: None,
-                    // background: Some(charcoal),
                 }
                 .into(),
                 selected: StyleProperties {
@@ -43,6 +54,19 @@ impl Default for Theme {
                     background: Some(orange),
                 }
                 .into(),
+                inactive,
+            },
+            search: SearchStyle {
+                active: StyleProperties {
+                    foreground: default_style.foreground,
+                    background: default_style.background,
+                }
+                .into(),
+                inactive,
+            },
+            block: BlockStyle {
+                active: default_style.into(),
+                inactive,
             },
         }
     }
@@ -53,6 +77,18 @@ pub(super) struct ListStyle {
     pub(super) even: Style,
     pub(super) odd: Style,
     pub(super) selected: Style,
+    pub(super) inactive: Style,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct SearchStyle {
+    pub(super) active: Style,
+    pub(super) inactive: Style,
+}
+#[derive(Debug, Clone)]
+pub(super) struct BlockStyle {
+    pub(super) active: Style,
+    pub(super) inactive: Style,
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -1,22 +1,19 @@
 use anyhow::Result;
-use ratatui::{crossterm::event::KeyEvent, prelude::*};
+use ratatui::prelude::*;
 use std::{
-    error::Error,
     marker::PhantomData,
     sync::OnceLock,
     thread::{self, sleep},
     time::Instant,
 };
-use tachyonfx::{Duration, Effect, EffectRenderer, Shader, fx};
+use tachyonfx::Duration;
 
 use crate::core::list_user_commands;
 
 use super::{
-    debug::log_to_file,
-    events::{Event, EventHandler, EventNotifier},
-    pages::{HomePage, HomePageState, ListPage, ManPage, ManPageState, Page},
+    events::{EventHandler, EventNotifier},
+    pages::{HomePage, HomePageState, ListPage, ManPage, Page},
     terminal::Terminal,
-    theme::get_theme,
 };
 
 pub struct App<'a> {

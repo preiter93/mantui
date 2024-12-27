@@ -1,20 +1,15 @@
 use super::{ListPageState, Page, drop_page, utils::centered_rect};
-use crate::{
-    core::list_user_commands,
-    ui::{
-        app::{AppContext, MAN_COMMANDS, poll_commands},
-        debug::log_to_file,
-        events::EventHandler,
-        theme::get_theme,
-    },
+use crate::ui::{
+    app::{AppContext, poll_commands},
+    theme::get_theme,
 };
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     prelude::*,
     widgets::Paragraph,
 };
-use std::{collections::HashMap, marker::PhantomData, thread, time::Instant};
-use tachyonfx::{Duration, Effect, EffectTimer, Interpolation, Motion, Shader, fx};
+use std::time::Instant;
+use tachyonfx::{Duration, Effect, EffectTimer, Interpolation, Shader, fx};
 
 #[derive(Default)]
 pub(crate) struct HomePage {}

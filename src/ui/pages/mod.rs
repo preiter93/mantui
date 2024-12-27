@@ -8,7 +8,7 @@ pub(super) use home::{HomePage, HomePageState};
 pub(super) use list::{ListPage, ListPageState};
 pub(super) use manual::{ManPage, ManPageState};
 
-use super::{App, app::AppContext, events::EventHandler};
+use super::app::AppContext;
 
 pub(super) enum Page {
     None,
@@ -19,13 +19,13 @@ pub(super) enum Page {
 
 fn drop_page(ctx: &mut AppContext) {
     match &ctx.current_page {
-        Page::Home(state) => {
+        Page::Home(_) => {
             HomePageState::on_drop(ctx);
         }
-        Page::List(state) => {
+        Page::List(_) => {
             ListPageState::on_drop(ctx);
         }
-        Page::Desc(state) => {
+        Page::Desc(_) => {
             ManPageState::on_drop(ctx);
         }
         Page::None => {}

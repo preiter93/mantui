@@ -1,27 +1,23 @@
 #![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss, clippy::cast_precision_loss)]
 use std::{cmp::min, time::Duration};
 
 use crate::{
     core::get_manual,
     ui::{
         app::{AppContext, poll_commands},
-        debug::log_to_file,
-        events::EventHandler,
         theme::get_theme,
     },
 };
 use ansi_to_tui::IntoText;
 use ratatui::{
     buffer::Buffer,
-    crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
+    crossterm::event::{KeyCode, KeyModifiers},
     prelude::*,
     widgets::{
-        Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap,
+        Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
     },
 };
-use style::Styled;
-use text::ToText;
-use tui_widget_list::{ListBuilder, ListState, ListView};
 
 use super::{ListPageState, Page, drop_page};
 
@@ -30,8 +26,6 @@ pub(crate) struct ManPage {}
 
 #[derive(Default)]
 pub(crate) struct ManPageState {
-    command: String,
-    manual: String,
     text: Text<'static>,
     scroll_pos: usize,
     page_height: usize,
@@ -89,7 +83,6 @@ impl ManPageState {
         let reduced_width = (width as f64 * 0.9) as u16;
 
         let width = format!("{reduced_width}");
-        log_to_file(&width);
         let manual = get_manual(command, &width).unwrap_or_default();
 
         let text =
@@ -98,8 +91,6 @@ impl ManPageState {
         let scrollbar = ScrollbarState::new(0).position(0);
 
         Self {
-            command: command.to_string(),
-            manual,
             scroll_pos: 0,
             page_height: 0,
             max_scroll_pos: 0,

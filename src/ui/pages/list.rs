@@ -1,13 +1,9 @@
-use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Paragraph, Widget};
-use style::Styled;
+use ratatui::widgets::{Block, Borders, Widget};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
-use crate::core::list_user_commands;
 use crate::ui::app::AppContext;
-use crate::ui::debug::log_to_file;
-use crate::ui::events::{EventHandler, RegisterEvent};
 use crate::ui::theme::get_theme;
 
 use super::{ManPageState, Page, drop_page};
@@ -47,7 +43,6 @@ impl ListPageState {
             .iter()
             .filter(|x| x.to_lowercase().contains(&self.search.to_lowercase()))
             .cloned()
-            .map(|x| x.to_lowercase())
             .collect()
     }
 
@@ -123,27 +118,41 @@ impl StatefulWidget for ListPage {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
 
-        let show_search = state.search_active || !state.search.is_empty();
-
         let [list, search] = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(0), Constraint::Length(show_search.into())])
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
             .areas(area);
 
+        let block_style = if state.search_active {
+            theme.block.inactive
+        } else {
+            theme.block.active
+        };
         let block = Block::default()
             .borders(Borders::ALL)
-            .border_type(ratatui::widgets::BorderType::Rounded);
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .style(block_style);
         let inner = block.inner(list);
         block.render(list, buf);
 
         let command_list = CommandList;
         command_list.render(inner, buf, state);
 
-        if show_search {
-            Line::from(format!("/{}", state.search.clone()))
-                .style(theme.base)
-                .render(search, buf);
+        let style = if state.search_active {
+            theme.search.active
+        } else {
+            theme.search.inactive
+        };
+
+        let mut spans = vec![
+            Span::styled(" Search (/): ", style),
+            Span::styled(state.search.clone(), style),
+        ];
+        if state.search_active {
+            spans.push(Span::styled(" ", style.reversed()));
         }
+
+        Line::from(spans).render(search, buf);
 
         state.page_width = inner.width as usize;
     }
@@ -166,11 +175,14 @@ impl StatefulWidget for CommandList {
 
             let mut line = Line::from(command);
 
-            if context.index % 2 == 0 {
-                line = line.style(theme.list.even);
+            let style = if state.search_active {
+                theme.list.inactive
+            } else if context.index % 2 == 0 {
+                theme.list.even
             } else {
-                line = line.style(theme.list.odd);
-            }
+                theme.list.odd
+            };
+            line = line.style(style);
 
             if context.is_selected {
                 line = line.style(theme.list.selected);
@@ -179,6 +191,9 @@ impl StatefulWidget for CommandList {
             (line, 1)
         });
 
-        ListView::new(builder, commands.len()).render(area, buf, &mut state.list);
+        ListView::new(builder, commands.len())
+            .scroll_padding(2)
+            .infinite_scrolling(false)
+            .render(area, buf, &mut state.list);
     }
 }

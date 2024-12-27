@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::{
-    collections::{HashMap, hash_map::Iter},
+    collections::HashMap,
     rc::Rc,
-    sync::{OnceLock, mpsc},
+    sync::mpsc,
     thread,
     time::{Duration, Instant},
 };
@@ -10,7 +10,7 @@ use std::{
 use ratatui::crossterm::event::{self, Event as CTEvent, KeyModifiers};
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 
-use super::{app::AppContext, debug::log_to_file};
+use super::app::AppContext;
 
 /// App events.
 #[derive(Debug)]
@@ -22,6 +22,7 @@ pub enum Event {
     Key(KeyEvent),
 }
 
+#[allow(dead_code)]
 /// An event handler.
 pub struct EventHandler {
     /// Event sender channel.

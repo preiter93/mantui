@@ -5,7 +5,6 @@ use ratatui::crossterm::terminal::{
     EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use ratatui::prelude::CrosstermBackend;
-use std::error::Error;
 use std::io::{Stderr, stderr, stdout};
 use std::ops::{Deref, DerefMut};
 

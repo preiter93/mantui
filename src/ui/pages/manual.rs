@@ -88,8 +88,14 @@ impl ManPageState {
                     if state.search_active {
                         state.search_active = false;
                     } else {
-                        drop_page(ctx);
-                        ctx.current_page = Page::List(ListPageState::new(ctx));
+                        if state.search.is_empty() {
+                            drop_page(ctx);
+                            ctx.current_page = Page::List(ListPageState::new(ctx));
+                        } else {
+                            state.search = String::new();
+                            state.matches = Vec::new();
+                            state.selected_match = None;
+                        }
                     }
                 }
                 KeyCode::Enter if state.search_active => {

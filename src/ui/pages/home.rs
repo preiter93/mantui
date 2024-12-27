@@ -54,28 +54,36 @@ impl StatefulWidget for HomePage {
 | | | | | | (_| | | | | |_| |_| | |
 |_| |_| |_|\__,_|_| |_|\__|\__,_|_|
         ";
-        let area = centered_rect(area, 6);
+        let area = centered_rect(area, 8);
 
-        let [title, subtitle] = Layout::default()
+        let [main, instruction] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .areas(area);
+
+        let [title, subtitle] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(2)])
+            .areas(main);
 
         Paragraph::new(figlet)
             .alignment(Alignment::Center)
             .style(theme.base)
             .render(title, buf);
 
-        if state.intro_effect.done() {
-            let description = "Search and Browse Man Pages";
+        Line::from("Search and Browse Man Pages")
+            .alignment(Alignment::Center)
+            .style(theme.base.italic())
+            .render(subtitle, buf);
 
-            Paragraph::new(description)
+        if state.intro_effect.done() {
+            Line::from("Press Enter to Continue")
                 .alignment(Alignment::Center)
-                .style(theme.base.italic())
-                .render(subtitle, buf);
+                .style(theme.base)
+                .render(instruction, buf);
         } else {
             let frame_duration = state.last_frame.elapsed();
-            state.intro_effect.process(frame_duration, buf, title);
+            state.intro_effect.process(frame_duration, buf, main);
         }
 
         state.last_frame = Instant::now();

@@ -108,9 +108,9 @@ impl ListPageState {
                         state.command_list.previous();
                     }
                 }
-                // KeyCode::Char('h') | KeyCode::Char('l') if !state.search_active => {
-                //     state.section_active = !state.section_active;
-                // }
+                KeyCode::Char('h') | KeyCode::Char('l') if !state.search_active => {
+                    // disabled for now
+                }
                 KeyCode::Char('d')
                     if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
                 {

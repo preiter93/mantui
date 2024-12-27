@@ -24,8 +24,7 @@ pub(crate) struct DescPageState {
 
 impl DescPageState {
     pub(crate) fn on_mount(ctx: &mut AppContext) {
-        let register = &mut ctx.register;
-        register.register_event("desc", |(ctx, event)| {
+        ctx.notifier.listen("desc", |(ctx, event)| {
             let Page::Desc(state) = &mut ctx.current_page else {
                 return;
             };
@@ -43,8 +42,7 @@ impl DescPageState {
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
-        let register = &mut ctx.register;
-        register.unregister_event("desc");
+        ctx.notifier.unlisten("desc");
     }
 }
 

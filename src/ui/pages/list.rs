@@ -48,16 +48,13 @@ impl ListPageState {
     }
 
     fn selected_commands(&self) -> Option<String> {
-        if let Some(selected) = self.list.selected {
-            Some(self.filtered_commands()[selected].clone())
-        } else {
-            None
-        }
+        self.list
+            .selected
+            .map(|selected| self.filtered_commands()[selected].clone())
     }
 
     pub(crate) fn on_mount(ctx: &mut AppContext) {
-        let register = &mut ctx.register;
-        register.register_event("list", |(ctx, key)| {
+        ctx.notifier.listen("list", |(ctx, key)| {
             let Page::List(state) = &mut ctx.current_page else {
                 return;
             };
@@ -108,8 +105,7 @@ impl ListPageState {
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
-        let register = &mut ctx.register;
-        register.unregister_event("home");
+        ctx.notifier.unlisten("home");
     }
 }
 

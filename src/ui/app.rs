@@ -13,7 +13,7 @@ use crate::core::list_user_commands;
 
 use super::{
     debug::log_to_file,
-    events::{Event, EventHandler, EventRegister},
+    events::{Event, EventHandler, EventNotifier},
     pages::{
         HomePage, HomePageState, ListPage, Page,
         desc::{DescPage, DescPageState},
@@ -31,7 +31,7 @@ pub struct App<'a> {
 pub(super) struct AppContext {
     pub(super) should_quit: bool,
     pub(super) current_page: Page,
-    pub(super) register: EventRegister,
+    pub(super) notifier: EventNotifier,
 }
 
 impl AppContext {
@@ -39,7 +39,7 @@ impl AppContext {
         Self {
             current_page: Page::None,
             should_quit: false,
-            register: EventRegister::default(),
+            notifier: EventNotifier::default(),
         }
     }
 }

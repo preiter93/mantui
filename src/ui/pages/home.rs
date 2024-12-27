@@ -38,7 +38,7 @@ impl HomePageState {
     }
 
     pub(crate) fn on_mount(ctx: &mut AppContext) {
-        ctx.register.register_event("home", |(ctx, key)| {
+        ctx.notifier.listen("home", |(ctx, key)| {
             if key == KeyEvent::from(KeyCode::Enter) {
                 let commands = poll_commands(Duration::from_millis(1000));
                 drop_page(ctx);
@@ -48,7 +48,7 @@ impl HomePageState {
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
-        ctx.register.unregister_event("home");
+        ctx.notifier.unlisten("home");
     }
 }
 

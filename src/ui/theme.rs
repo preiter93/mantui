@@ -17,6 +17,7 @@ pub(super) struct Theme {
     pub(super) list: ListStyle,
     pub(super) search: SearchStyle,
     pub(super) block: BlockStyle,
+    pub(super) highlight: HighlightStyle,
 }
 
 impl Default for Theme {
@@ -28,11 +29,13 @@ impl Default for Theme {
 
         let black = Color::Black;
         let orange = Color::Rgb(255, 153, 0);
-        let yellow = Color::Rgb(255, 255, 0);
         let charcoal = Color::Rgb(28, 28, 32);
         let gray300 = Color::from_hsl(240., 23., 80.);
         let gray500 = Color::from_hsl(240., 10., 30.);
         let gray700 = Color::from_hsl(240., 7., 12.);
+
+        let red500 = Color::Red;
+        let red700 = Color::from_hsl(0.0, 70., 38.);
 
         let inactive = StyleProperties {
             foreground: Some(gray500),
@@ -51,7 +54,7 @@ impl Default for Theme {
                 .into(),
                 selected: StyleProperties {
                     foreground: Some(charcoal),
-                    background: Some(orange),
+                    background: Some(red500),
                 }
                 .into(),
                 inactive,
@@ -63,6 +66,18 @@ impl Default for Theme {
                 }
                 .into(),
                 inactive,
+            },
+            highlight: HighlightStyle {
+                active: StyleProperties {
+                    foreground: Some(black),
+                    background: Some(red500),
+                }
+                .into(),
+                inactive: StyleProperties {
+                    foreground: Some(black),
+                    background: Some(red700),
+                }
+                .into(),
             },
             block: BlockStyle {
                 active: default_style.into(),
@@ -85,6 +100,7 @@ pub(super) struct SearchStyle {
     pub(super) active: Style,
     pub(super) inactive: Style,
 }
+
 #[derive(Debug, Clone)]
 pub(super) struct BlockStyle {
     pub(super) active: Style,
@@ -95,6 +111,12 @@ pub(super) struct BlockStyle {
 pub(super) struct StyleProperties {
     foreground: Option<Color>,
     background: Option<Color>,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct HighlightStyle {
+    pub(super) active: Style,
+    pub(super) inactive: Style,
 }
 
 impl From<StyleProperties> for Style {

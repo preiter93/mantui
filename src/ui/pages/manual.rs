@@ -271,12 +271,17 @@ impl StatefulWidget for ManPage {
         );
 
         // Highlight the selected search matches.
+        let style = if state.search_active {
+            theme.highlight.inactive
+        } else {
+            theme.highlight.active
+        };
         if let Some(selected_match) = state.selected_match() {
             let x = selected_match.1 + 2;
             let y = (selected_match.0 + 1).saturating_sub(state.scroll_pos as u16);
             if y > 0 && y < area.height - 1 {
                 let area = Rect::new(x, y, state.search.len() as u16, 1);
-                Block::new().on_red().render(area, buf);
+                Block::new().style(style).render(area, buf);
             }
         }
 
@@ -304,7 +309,7 @@ fn find_matches_positions(input: &Text, query: &str) -> Vec<(u16, u16)> {
 
     for (current_row, line) in input.lines.clone().into_iter().enumerate() {
         let line = line.to_string();
-        for (index, _) in line.match_indices(query) {
+        for (index, _) in line.to_lowercase().match_indices(&query.to_lowercase()) {
             positions.push((current_row as u16, index as u16));
         }
     }

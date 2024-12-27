@@ -4,7 +4,7 @@ use std::cmp::min;
 
 use crate::{
     core::get_manual,
-    ui::{app::AppContext, debug::log_to_file, theme::get_theme},
+    ui::{app::AppContext, theme::get_theme},
 };
 use ansi_to_tui::IntoText;
 use ratatui::{
@@ -23,13 +23,14 @@ pub(crate) struct ManPage {}
 
 #[derive(Default)]
 pub(crate) struct ManPageState {
-    text_raw: String,
     text: Text<'static>,
     scroll_pos: usize,
     page_height: usize,
     max_scroll_pos: usize,
     scrollbar: ScrollbarState,
+    search_active: bool,
     search: String,
+    selected_match: Option<usize>,
     matches: Vec<(u16, u16)>,
 }
 
@@ -41,6 +42,14 @@ impl ManPageState {
             };
 
             match event.code {
+                KeyCode::Char(ch)
+                    if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
+                {
+                    state.selected_match = None;
+                    state.search.push(ch);
+                    state.matches = find_matches_positions(&state.text, &state.search);
+                    state.select_next_search();
+                }
                 KeyCode::Char('j') => {
                     state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
                 }
@@ -62,13 +71,97 @@ impl ManPageState {
                 KeyCode::Char('g') => {
                     state.scroll_pos = 0;
                 }
+
+                KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
+                    state.select_previous_search();
+                }
+                KeyCode::Char('n') => {
+                    state.select_next_search();
+                }
+                KeyCode::Char('/') => {
+                    state.search_active = true;
+                }
+                KeyCode::Backspace if state.search_active => {
+                    state.search.pop();
+                }
                 KeyCode::Esc => {
-                    drop_page(ctx);
-                    ctx.current_page = Page::List(ListPageState::new(ctx));
+                    if state.search_active {
+                        state.search_active = false;
+                    } else {
+                        drop_page(ctx);
+                        ctx.current_page = Page::List(ListPageState::new(ctx));
+                    }
+                }
+                KeyCode::Enter if state.search_active => {
+                    state.search_active = false;
                 }
                 _ => {}
             }
         });
+    }
+
+    pub fn select_next_search(&mut self) {
+        if self.matches.is_empty() {
+            return;
+        }
+
+        self.selected_match = self.selected_match.map_or(Some(0), |selected| {
+            Some(min(selected + 1, self.matches.len().saturating_sub(1)))
+        });
+
+        if let Some(selected_index) = self.selected_match {
+            let (selected_row, _) = self.matches[selected_index];
+            let selected_row = selected_row as usize;
+
+            // Check if the selected match is after the visible range
+            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3);
+            let diff = selected_row.saturating_sub(last_visible_row);
+            if diff > 0 {
+                self.scroll_pos += diff;
+            }
+
+            // Check if the selected match is above the visible range
+            let first_visible_row = self.scroll_pos;
+            if selected_row < first_visible_row {
+                self.scroll_pos = selected_row;
+            }
+        }
+    }
+
+    pub fn select_previous_search(&mut self) {
+        if self.matches.is_empty() {
+            return;
+        }
+
+        self.selected_match = self
+            .selected_match
+            .map_or(Some(0), |selected| Some(selected.saturating_sub(1)));
+
+        if let Some(selected_index) = self.selected_match {
+            let (selected_row, _) = self.matches[selected_index];
+            let selected_row = selected_row as usize;
+
+            // Check if the selected match is after the visible range
+            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3);
+            let diff = selected_row.saturating_sub(last_visible_row);
+            if diff > 0 {
+                self.scroll_pos += diff;
+            }
+
+            // Check if the selected match is above the visible range
+            let first_visible_row = self.scroll_pos;
+            if selected_row < first_visible_row {
+                self.scroll_pos = selected_row;
+            }
+        }
+    }
+
+    fn selected_match(&self) -> Option<(u16, u16)> {
+        if let Some(index) = self.selected_match {
+            return Some(self.matches[index]);
+        }
+
+        None
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
@@ -89,19 +182,16 @@ impl ManPageState {
 
         let scrollbar = ScrollbarState::new(0).position(0);
 
-        let matches = find_matches_positions(&text, "grep");
-        log_to_file(&matches);
-        // log_to_file(&text);
-
         Self {
             scroll_pos: 0,
             page_height: 0,
             max_scroll_pos: 0,
             text,
-            text_raw,
             scrollbar,
             search: String::new(),
-            matches,
+            matches: Vec::new(),
+            selected_match: None,
+            search_active: false,
         }
     }
 }
@@ -109,21 +199,53 @@ impl ManPageState {
 impl StatefulWidget for ManPage {
     type State = ManPageState;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let [main, search] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .areas(area);
+
         let theme = get_theme();
+
+        let style = if state.search_active {
+            theme.block.inactive
+        } else {
+            theme.block.active
+        };
+
         let block = Block::default()
-            .style(theme.base)
+            .style(style)
             .borders(Borders::ALL)
             .border_type(ratatui::widgets::BorderType::Rounded)
             .padding(Padding::horizontal(1));
-        let inner = block.inner(area);
-        block.render(area, buf);
+        let inner = block.inner(main);
+        block.render(main, buf);
 
         // Render the paragraph.
         state.max_scroll_pos = state.text.height().saturating_sub(inner.height as usize);
-        state.page_height = area.height as usize;
+        state.page_height = main.height as usize;
 
-        Paragraph::new(state.text.clone())
+        let style = if state.search_active {
+            theme.block.inactive
+        } else {
+            theme.block.active
+        };
+
+        let mut lines: Vec<Line> = Vec::new();
+        for line in state.text.lines.clone() {
+            let mut new_line: Vec<Span> = Vec::new();
+            for span in line {
+                if state.search_active {
+                    new_line.push(span.style(style));
+                } else {
+                    new_line.push(span);
+                }
+            }
+            lines.push(Line::from(new_line));
+        }
+
+        Paragraph::new(lines)
             .scroll((state.scroll_pos as u16, 0))
+            // .style(style)
             .render(inner, buf);
 
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -134,7 +256,7 @@ impl StatefulWidget for ManPage {
         state.scrollbar = state.scrollbar.content_length(state.max_scroll_pos);
         state.scrollbar = state.scrollbar.position(state.scroll_pos);
         scrollbar.render(
-            area.inner(Margin {
+            main.inner(Margin {
                 horizontal: 0,
                 vertical: 0,
             }),
@@ -142,30 +264,43 @@ impl StatefulWidget for ManPage {
             &mut state.scrollbar,
         );
 
-        // Highlight the search matches.
-        for m in &state.matches {
-            let x = m.1 + 2;
-            let y = (m.0 + 1).saturating_sub(state.scroll_pos as u16);
+        // Highlight the selected search matches.
+        if let Some(selected_match) = state.selected_match() {
+            let x = selected_match.1 + 2;
+            let y = (selected_match.0 + 1).saturating_sub(state.scroll_pos as u16);
             if y > 0 && y < area.height - 1 {
-                let area = Rect::new(x, y, 4 as u16, 1);
+                let area = Rect::new(x, y, state.search.len() as u16, 1);
                 Block::new().on_red().render(area, buf);
             }
         }
+
+        // Render the search bar
+        let style = if state.search_active {
+            theme.search.active
+        } else {
+            theme.search.inactive
+        };
+
+        let mut spans = vec![
+            Span::styled(" Search (/): ", style),
+            Span::styled(state.search.clone(), style),
+        ];
+        if state.search_active {
+            spans.push(Span::styled(" ", style.reversed()));
+        }
+
+        Line::from(spans).render(search, buf);
     }
 }
 
 fn find_matches_positions(input: &Text, query: &str) -> Vec<(u16, u16)> {
     let mut positions = Vec::new();
-    let mut current_row = 0;
-    // let mut current_col = 0;
 
-    for line in input.lines.clone() {
+    for (current_row, line) in input.lines.clone().into_iter().enumerate() {
         let line = line.to_string();
-        // current_col = 0 as u16;
         for (index, _) in line.match_indices(query) {
-            positions.push((current_row, index as u16));
+            positions.push((current_row as u16, index as u16));
         }
-        current_row += 1;
     }
 
     positions

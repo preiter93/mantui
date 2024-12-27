@@ -3,7 +3,7 @@ use crate::ui::{app::AppContext, theme::get_theme};
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     prelude::*,
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
 };
 use std::time::Instant;
 use tachyonfx::{CenteredShrink, Effect, EffectTimer, Interpolation, Shader, fx};

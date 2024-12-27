@@ -14,10 +14,7 @@ use crate::core::list_user_commands;
 use super::{
     debug::log_to_file,
     events::{Event, EventHandler, EventNotifier},
-    pages::{
-        HomePage, HomePageState, ListPage, Page,
-        desc::{DescPage, DescPageState},
-    },
+    pages::{HomePage, HomePageState, ListPage, ManPage, ManPageState, Page},
     terminal::Terminal,
     theme::get_theme,
 };
@@ -32,6 +29,8 @@ pub(super) struct AppContext {
     pub(super) should_quit: bool,
     pub(super) current_page: Page,
     pub(super) notifier: EventNotifier,
+    pub(super) search: String,
+    pub(super) selected_index: Option<usize>,
 }
 
 impl AppContext {
@@ -40,6 +39,8 @@ impl AppContext {
             current_page: Page::None,
             should_quit: false,
             notifier: EventNotifier::default(),
+            search: String::new(),
+            selected_index: None,
         }
     }
 }
@@ -62,10 +63,10 @@ impl App<'_> {
         let mut terminal = Terminal::new()?;
         let mut app = Self::new();
 
-        // let state = HomePageState::new(&mut app.ctx);
-        // app.ctx.current_page = Page::Home(state);
-        let state = DescPageState::new(&mut app.ctx, "grep");
-        app.ctx.current_page = Page::Desc(state);
+        let state = HomePageState::new(&mut app.ctx);
+        app.ctx.current_page = Page::Home(state);
+        // let state = DescPageState::new(&mut app.ctx, "grep", 50);
+        // app.ctx.current_page = Page::Desc(state);
 
         while !app.ctx.should_quit {
             terminal.draw(|frame| {
@@ -91,7 +92,7 @@ impl Widget for &mut App<'_> {
                 page.render(area, buf, state);
             }
             Page::Desc(state) => {
-                let page = DescPage::default();
+                let page = ManPage::default();
                 page.render(area, buf, state);
             }
             Page::None => {}

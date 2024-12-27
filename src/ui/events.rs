@@ -70,9 +70,7 @@ impl EventHandler {
 
     pub fn handle(&self, ctx: &mut AppContext) -> Result<()> {
         match self.next()? {
-            Event::Tick => {
-                // log_to_file("tick");
-            }
+            Event::Tick => {}
             Event::Key(key) => {
                 // Always quit on <ctrl-c>.
                 if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {

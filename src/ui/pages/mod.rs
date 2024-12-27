@@ -1,14 +1,12 @@
-pub(super) mod desc;
 pub(super) mod help;
 pub(super) mod home;
 pub(super) mod list;
-pub(super) mod search;
+pub(super) mod manual;
 mod utils;
 
-use desc::DescPageState;
 pub(super) use home::{HomePage, HomePageState};
 pub(super) use list::{ListPage, ListPageState};
-// pub(super) use search::{SearchPage, SearchPageState};
+pub(super) use manual::{ManPage, ManPageState};
 
 use super::{App, app::AppContext, events::EventHandler};
 
@@ -16,7 +14,7 @@ pub(super) enum Page {
     None,
     Home(HomePageState),
     List(ListPageState),
-    Desc(DescPageState),
+    Desc(ManPageState),
 }
 
 fn drop_page(ctx: &mut AppContext) {
@@ -28,7 +26,7 @@ fn drop_page(ctx: &mut AppContext) {
             ListPageState::on_drop(ctx);
         }
         Page::Desc(state) => {
-            DescPageState::on_drop(ctx);
+            ManPageState::on_drop(ctx);
         }
         Page::None => {}
     }

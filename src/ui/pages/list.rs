@@ -10,8 +10,7 @@ use crate::ui::debug::log_to_file;
 use crate::ui::events::{EventHandler, RegisterEvent};
 use crate::ui::theme::get_theme;
 
-use super::desc::DescPageState;
-use super::{Page, drop_page};
+use super::{ManPageState, Page, drop_page};
 
 #[derive(Default)]
 pub(crate) struct ListPage {}
@@ -23,18 +22,23 @@ pub(crate) struct ListPageState {
     num_elements: u16,
     search_active: bool,
     search: String,
+    page_width: usize,
 }
 
 impl ListPageState {
     pub(crate) fn new(ctx: &mut AppContext, commands: Vec<String>) -> Self {
         Self::on_mount(ctx);
 
+        let mut list = ListState::default();
+        list.select(ctx.selected_index);
+
         Self {
             commands,
-            list: ListState::default(),
+            list,
             num_elements: 0,
             search_active: false,
-            search: String::new(),
+            search: ctx.search.clone(),
+            page_width: 0,
         }
     }
 
@@ -82,8 +86,12 @@ impl ListPageState {
                 }
                 KeyCode::Enter if !state.search_active => {
                     if let Some(command) = state.selected_commands() {
+                        ctx.search = state.search.clone();
+                        ctx.selected_index = state.list.selected;
+
+                        let width = state.page_width;
                         drop_page(ctx);
-                        ctx.current_page = Page::Desc(DescPageState::new(ctx, &command));
+                        ctx.current_page = Page::Desc(ManPageState::new(ctx, &command, width));
                     }
                 }
                 KeyCode::Char('/') if !state.search_active => {
@@ -122,7 +130,9 @@ impl StatefulWidget for ListPage {
             .constraints([Constraint::Min(0), Constraint::Length(show_search.into())])
             .areas(area);
 
-        let block = Block::default().borders(Borders::ALL);
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded);
         let inner = block.inner(list);
         block.render(list, buf);
 
@@ -134,6 +144,8 @@ impl StatefulWidget for ListPage {
                 .style(theme.base)
                 .render(search, buf);
         }
+
+        state.page_width = inner.width as usize;
     }
 }
 

@@ -34,7 +34,8 @@ impl Default for Theme {
                 even: default_style.into(),
                 odd: StyleProperties {
                     foreground: Some(Color::White),
-                    background: Some(charcoal),
+                    background: None,
+                    // background: Some(charcoal),
                 }
                 .into(),
                 selected: StyleProperties {

@@ -3,7 +3,7 @@ use crate::ui::{app::AppContext, theme::get_theme};
 use ratatui::{
     crossterm::event::{KeyCode, KeyEvent},
     prelude::*,
-    widgets::Paragraph,
+    widgets::{Block, Borders, Paragraph},
 };
 use std::time::Instant;
 use tachyonfx::{CenteredShrink, Effect, EffectTimer, Interpolation, Shader, fx};
@@ -56,12 +56,12 @@ impl StatefulWidget for HomePage {
 | | | | | | (_| | | | | |_| |_| | |
 |_| |_| |_|\__,_|_| |_|\__|\__,_|_|
         ";
-        let area = centered_rect(area, 8);
+        let centered_area = centered_rect(area, 8);
 
         let [main, instruction] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(1)])
-            .areas(area);
+            .areas(centered_area);
 
         let [title, subtitle] = Layout::default()
             .direction(Direction::Vertical)
@@ -79,6 +79,11 @@ impl StatefulWidget for HomePage {
             .render(subtitle, buf);
 
         if state.intro_effect.done() {
+            // let block = Block::default()
+            //     .borders(Borders::ALL)
+            //     .border_type(ratatui::widgets::BorderType::Rounded);
+            // block.render(area, buf);
+
             let instruction_text = InstructionText;
             instruction_text.render(instruction.inner_centered(23, 1), buf, state);
         } else {

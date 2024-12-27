@@ -34,6 +34,8 @@ macro_rules! select_section {
             $state.commands = None;
             $state.section_list.select(Some($section));
             $state.command_list.select(None);
+            $state.search = String::new();
+            $ctx.search = String::new();
             $ctx.selected_section = $section;
             load_commands_in_background($ctx, $section);
         }

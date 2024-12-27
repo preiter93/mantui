@@ -4,7 +4,7 @@ use std::cmp::min;
 
 use crate::{
     core::get_manual,
-    ui::{app::AppContext, theme::get_theme},
+    ui::{app::AppContext, debug::log_to_file, theme::get_theme},
 };
 use ansi_to_tui::IntoText;
 use ratatui::{
@@ -23,11 +23,14 @@ pub(crate) struct ManPage {}
 
 #[derive(Default)]
 pub(crate) struct ManPageState {
+    text_raw: String,
     text: Text<'static>,
     scroll_pos: usize,
     page_height: usize,
     max_scroll_pos: usize,
     scrollbar: ScrollbarState,
+    search: String,
+    matches: Vec<(u16, u16)>,
 }
 
 impl ManPageState {
@@ -79,19 +82,26 @@ impl ManPageState {
         let reduced_width = (width as f64 * 0.9) as u16;
 
         let width = format!("{reduced_width}");
-        let manual = get_manual(command, &width).unwrap_or_default();
+        let text_raw = get_manual(command, &width).unwrap_or_default();
 
         let text =
-            IntoText::into_text(&manual).unwrap_or(Text::from("Could not convert ansi to tui."));
+            IntoText::into_text(&text_raw).unwrap_or(Text::from("Could not convert ansi to tui."));
 
         let scrollbar = ScrollbarState::new(0).position(0);
+
+        let matches = find_matches_positions(&text, "grep");
+        log_to_file(&matches);
+        // log_to_file(&text);
 
         Self {
             scroll_pos: 0,
             page_height: 0,
             max_scroll_pos: 0,
             text,
+            text_raw,
             scrollbar,
+            search: String::new(),
+            matches,
         }
     }
 }
@@ -108,6 +118,7 @@ impl StatefulWidget for ManPage {
         let inner = block.inner(area);
         block.render(area, buf);
 
+        // Render the paragraph.
         state.max_scroll_pos = state.text.height().saturating_sub(inner.height as usize);
         state.page_height = area.height as usize;
 
@@ -119,6 +130,7 @@ impl StatefulWidget for ManPage {
             .begin_symbol(Some("╮"))
             .end_symbol(Some("╯"));
 
+        // Render the scrollbar.
         state.scrollbar = state.scrollbar.content_length(state.max_scroll_pos);
         state.scrollbar = state.scrollbar.position(state.scroll_pos);
         scrollbar.render(
@@ -129,5 +141,32 @@ impl StatefulWidget for ManPage {
             buf,
             &mut state.scrollbar,
         );
+
+        // Highlight the search matches.
+        for m in &state.matches {
+            let x = m.1 + 2;
+            let y = (m.0 + 1).saturating_sub(state.scroll_pos as u16);
+            if y > 0 && y < area.height - 1 {
+                let area = Rect::new(x, y, 4 as u16, 1);
+                Block::new().on_red().render(area, buf);
+            }
+        }
     }
+}
+
+fn find_matches_positions(input: &Text, query: &str) -> Vec<(u16, u16)> {
+    let mut positions = Vec::new();
+    let mut current_row = 0;
+    // let mut current_col = 0;
+
+    for line in input.lines.clone() {
+        let line = line.to_string();
+        // current_col = 0 as u16;
+        for (index, _) in line.match_indices(query) {
+            positions.push((current_row, index as u16));
+        }
+        current_row += 1;
+    }
+
+    positions
 }

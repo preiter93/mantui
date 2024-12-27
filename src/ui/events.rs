@@ -94,6 +94,11 @@ impl EventHandler {
                 notifier.notify_listener(ctx, key);
             }
             Event::Internal(event) => {
+                // Man commands are loaded in the background.
+                //
+                // After they are loaded, we assign them to the
+                // global AppContext state. And we must also
+                // update the command page, if it is open.
                 if let InternalEvent::Loaded(commands) = event {
                     ctx.commands = Some(commands.clone());
                     if let Page::List(state) = &mut ctx.current_page {

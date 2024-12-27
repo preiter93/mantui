@@ -1,6 +1,8 @@
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Widget};
+use tachyonfx::CenteredShrink;
+use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
 use crate::ui::app::AppContext;
@@ -19,6 +21,7 @@ pub(crate) struct ListPageState {
     search_active: bool,
     search: String,
     page_width: usize,
+    throbber: ThrobberState,
 }
 
 impl ListPageState {
@@ -35,6 +38,7 @@ impl ListPageState {
             search_active: false,
             search: ctx.search.clone(),
             page_width: 0,
+            throbber: ThrobberState::default(),
         }
     }
 
@@ -178,8 +182,22 @@ impl StatefulWidget for CommandList {
 
         let commands = state.filtered_commands();
         let Some(commands) = commands else {
-            // TODO: Show throbber
-            Line::from("Loading ...").render(area, buf);
+            let area = area.inner_centered(10, 2);
+            let [throbber, text] = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Length(1), Constraint::Length(1)])
+                .areas(area);
+            StatefulWidget::render(
+                Throbber::default().style(theme.base),
+                throbber.inner_centered(1, 1),
+                buf,
+                &mut state.throbber,
+            );
+            Line::from("Loading...")
+                .style(theme.base)
+                .italic()
+                .render(text, buf);
+            state.throbber.calc_next();
             return;
         };
 

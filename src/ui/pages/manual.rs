@@ -111,6 +111,8 @@ impl ManPageState {
             return;
         }
 
+        let padding = 2;
+
         self.selected_match = self.selected_match.map_or(Some(0), |selected| {
             Some(min(selected + 1, self.matches.len().saturating_sub(1)))
         });
@@ -120,16 +122,17 @@ impl ManPageState {
             let selected_row = selected_row as usize;
 
             // Check if the selected match is after the visible range
-            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3);
+            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3) - padding;
             let diff = selected_row.saturating_sub(last_visible_row);
             if diff > 0 {
                 self.scroll_pos += diff;
+                self.scroll_pos = self.scroll_pos.min(self.max_scroll_pos);
             }
 
             // Check if the selected match is above the visible range
-            let first_visible_row = self.scroll_pos;
+            let first_visible_row = self.scroll_pos + padding;
             if selected_row < first_visible_row {
-                self.scroll_pos = selected_row;
+                self.scroll_pos = selected_row.saturating_sub(padding);
             }
         }
     }
@@ -138,6 +141,8 @@ impl ManPageState {
         if self.matches.is_empty() {
             return;
         }
+
+        let padding = 2;
 
         self.selected_match = self
             .selected_match
@@ -148,16 +153,17 @@ impl ManPageState {
             let selected_row = selected_row as usize;
 
             // Check if the selected match is after the visible range
-            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3);
+            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3) - padding;
             let diff = selected_row.saturating_sub(last_visible_row);
             if diff > 0 {
                 self.scroll_pos += diff;
+                self.scroll_pos = self.scroll_pos.min(self.max_scroll_pos);
             }
 
             // Check if the selected match is above the visible range
-            let first_visible_row = self.scroll_pos;
+            let first_visible_row = self.scroll_pos + padding;
             if selected_row < first_visible_row {
-                self.scroll_pos = selected_row;
+                self.scroll_pos = selected_row.saturating_sub(padding);
             }
         }
     }

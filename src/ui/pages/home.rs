@@ -26,7 +26,6 @@ impl HomePageState {
 
         Self {
             intro_effect: fx::fade_from_fg(bg, EffectTimer::from_ms(1000, Interpolation::Linear)),
-            // instr_effect: fx::fade_from_fg(bg, EffectTimer::from_ms(1000, Interpolation::Linear)),
             last_frame: Instant::now(),
         }
     }

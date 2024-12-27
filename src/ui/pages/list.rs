@@ -57,121 +57,59 @@ impl ListPageState {
 
     pub(crate) fn on_mount(ctx: &mut AppContext) {
         let register = &mut ctx.register;
-        register.register_event(KeyEvent::from(KeyCode::Char('j')), |(ctx, _)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                if state.search_active {
-                    return;
+        register.register_event("list", |(ctx, key)| {
+            let Page::List(state) = &mut ctx.current_page else {
+                return;
+            };
+
+            match key.code {
+                KeyCode::Char('j') if !state.search_active => {
+                    state.list.next();
                 }
-
-                state.list.next();
-            }
-        });
-
-        register.register_event(KeyEvent::from(KeyCode::Char('k')), |(ctx, _)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                if state.search_active {
-                    return;
+                KeyCode::Char('k') if !state.search_active => {
+                    state.list.previous();
                 }
-
-                state.list.previous();
-            }
-        });
-
-        register.register_event(
-            KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL),
-            |(ctx, _)| {
-                if let Page::List(state) = &mut ctx.current_page {
-                    if state.search_active {
-                        return;
-                    }
-
+                KeyCode::Char('d')
+                    if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
+                {
                     for _ in 0..state.num_elements / 2 {
                         state.list.next();
                     }
                 }
-            },
-        );
-
-        register.register_event(
-            KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL),
-            |(ctx, _)| {
-                if let Page::List(state) = &mut ctx.current_page {
-                    if state.search_active {
-                        return;
-                    }
-
+                KeyCode::Char('u')
+                    if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
+                {
                     for _ in 0..state.num_elements / 2 {
                         state.list.previous();
                     }
                 }
-            },
-        );
-
-        register.register_event(KeyEvent::from(KeyCode::Char('/')), |(ctx, event)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                state.search_active = true;
-                state.list.selected = None;
-            }
-        });
-
-        register.register_event(KeyEvent::from(KeyCode::Esc), |(ctx, event)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                state.search_active = false;
-            }
-        });
-
-        register.register_event(RegisterEvent::All, |(ctx, event)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                if !state.search_active {
-                    return;
-                }
-
-                if let KeyCode::Char(ch) = event.code {
-                    if ch == '/' {
-                        return;
+                KeyCode::Enter if !state.search_active => {
+                    if let Some(command) = state.selected_commands() {
+                        drop_page(ctx);
+                        ctx.current_page = Page::Desc(DescPageState::new(ctx, &command));
                     }
-                    log_to_file(format!("push {:}", state.search));
+                }
+                KeyCode::Char('/') if !state.search_active => {
+                    state.search_active = true;
+                    state.list.selected = None;
+                }
+                KeyCode::Esc | KeyCode::Enter if state.search_active => {
+                    state.search_active = false;
+                }
+                KeyCode::Backspace if state.search_active => {
+                    state.search.pop();
+                }
+                KeyCode::Char(ch) if state.search_active => {
                     state.search.push(ch);
                 }
-            }
-        });
-
-        register.register_event(KeyEvent::from(KeyCode::Backspace), |(ctx, event)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                if !state.search_active {
-                    return;
-                }
-
-                state.search.pop();
-            }
-        });
-
-        register.register_event(KeyEvent::from(KeyCode::Enter), |(ctx, event)| {
-            if let Page::List(state) = &mut ctx.current_page {
-                if state.search_active {
-                    state.search_active = false;
-                    return;
-                }
-
-                if let Some(command) = state.selected_commands() {
-                    drop_page(ctx);
-                    ctx.current_page = Page::Desc(DescPageState::new(ctx, &command));
-                }
+                _ => {}
             }
         });
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
         let register = &mut ctx.register;
-        register.unregister_event(KeyEvent::from(KeyCode::Char('j')));
-        register.unregister_event(KeyEvent::from(KeyCode::Char('k')));
-        register.unregister_event(KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL));
-        register.unregister_event(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
-        register.unregister_event(KeyEvent::from(KeyCode::Char('/')));
-        register.unregister_event(KeyEvent::from(KeyCode::Enter));
-        register.unregister_event(KeyEvent::from(KeyCode::Esc));
-        register.unregister_event(KeyEvent::from(KeyCode::Backspace));
-        register.unregister_event(RegisterEvent::All);
+        register.unregister_event("home");
     }
 }
 

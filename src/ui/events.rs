@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map::Iter},
     rc::Rc,
     sync::{OnceLock, mpsc},
     thread,
@@ -81,12 +81,13 @@ impl EventHandler {
                 }
 
                 // Check for registered key events.
-                if let Some(callback) = ctx.register.get_event(key) {
-                    (callback)((ctx, key));
-                }
-                if let Some(callback) = ctx.register.get_event(RegisterEvent::All) {
-                    (callback)((ctx, key));
-                }
+                // for callback in ctx.register.
+                // if let Some(callback) = ctx.register.get_event(key) {
+                //     (callback)((ctx, key));
+                // }
+                // if let Some(callback) = ctx.register.get_event(RegisterEvent::All) {
+                //     (callback)((ctx, key));
+                // }
                 // if let Some(callback) = &ctx.register.capture_all {
                 //     let callback = Rc::clone(callback);
                 //     (callback)(ctx);
@@ -103,7 +104,7 @@ type KeyEventCallback = dyn Fn((&mut AppContext, KeyEvent)) + 'static;
 // An event register.
 #[derive(Default)]
 pub struct EventRegister {
-    register: HashMap<RegisterEvent, Rc<KeyEventCallback>>,
+    register: HashMap<String, Rc<KeyEventCallback>>,
     capture_all: Option<Rc<KeyEventCallback>>,
 }
 
@@ -122,12 +123,16 @@ impl From<KeyEvent> for RegisterEvent {
 
 impl EventRegister {
     /// Register a new key event.
-    pub(crate) fn register_event<T, C>(&mut self, event: T, callback: C)
+    pub(crate) fn register_event<T, C>(&mut self, id: T, callback: C)
     where
-        T: Into<RegisterEvent>,
+        T: Into<String>,
         C: Fn((&mut AppContext, KeyEvent)) + 'static,
     {
-        self.register.insert(event.into(), Rc::new(callback));
+        self.register.insert(id.into(), Rc::new(callback));
+    }
+
+    pub(crate) fn iter(&self) -> Iter<'_, String, Rc<KeyEventCallback>> {
+        self.register.iter()
     }
 
     // /// Registers a capture all callback.
@@ -139,18 +144,18 @@ impl EventRegister {
     // }
 
     /// Unregister a key event.
-    pub(crate) fn unregister_event<T>(&mut self, event: T)
+    pub(crate) fn unregister_event<T>(&mut self, id: T)
     where
-        T: Into<RegisterEvent>,
+        T: Into<String>,
     {
-        let _ = self.register.remove(&event.into());
+        let _ = self.register.remove(&id.into());
     }
 
     /// Returns a clone event callback.
-    pub(crate) fn get_event<T>(&self, event: T) -> Option<Rc<KeyEventCallback>>
+    pub(crate) fn get_event<T>(&self, id: T) -> Option<Rc<KeyEventCallback>>
     where
-        T: Into<RegisterEvent>,
+        T: Into<String>,
     {
-        self.register.get(&event.into()).map(Rc::clone)
+        self.register.get(&id.into()).map(Rc::clone)
     }
 }

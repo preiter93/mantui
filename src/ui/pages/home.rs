@@ -38,18 +38,17 @@ impl HomePageState {
     }
 
     pub(crate) fn on_mount(ctx: &mut AppContext) {
-        ctx.register
-            .register_event(KeyEvent::from(KeyCode::Enter), |(ctx, _)| {
+        ctx.register.register_event("home", |(ctx, key)| {
+            if key == KeyEvent::from(KeyCode::Enter) {
                 let commands = poll_commands(Duration::from_millis(1000));
-
                 drop_page(ctx);
                 ctx.current_page = Page::List(ListPageState::new(ctx, commands));
-            });
+            }
+        });
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
-        ctx.register
-            .unregister_event(KeyEvent::from(KeyCode::Enter));
+        ctx.register.unregister_event("home");
     }
 }
 

@@ -20,32 +20,31 @@ pub(crate) struct DescPage {}
 pub(crate) struct DescPageState {
     description: String,
     scroll_pos: u16,
-    // list: ListState,
 }
 
 impl DescPageState {
     pub(crate) fn on_mount(ctx: &mut AppContext) {
         let register = &mut ctx.register;
+        register.register_event("desc", |(ctx, event)| {
+            let Page::Desc(state) = &mut ctx.current_page else {
+                return;
+            };
 
-        register.register_event(KeyEvent::from(KeyCode::Char('j')), |(ctx, _)| {
-            if let Page::Desc(state) = &mut ctx.current_page {
-                state.scroll_pos += 1;
-                // state.list.next();
-            }
-        });
-
-        register.register_event(KeyEvent::from(KeyCode::Char('k')), |(ctx, _)| {
-            if let Page::Desc(state) = &mut ctx.current_page {
-                state.scroll_pos = state.scroll_pos.saturating_sub(1);
-                // state.list.previous();
+            match event.code {
+                KeyCode::Char('j') => {
+                    state.scroll_pos += 1;
+                }
+                KeyCode::Char('j') => {}
+                _ => {
+                    state.scroll_pos = state.scroll_pos.saturating_sub(1);
+                }
             }
         });
     }
 
     pub(crate) fn on_drop(ctx: &mut AppContext) {
         let register = &mut ctx.register;
-        register.unregister_event(KeyEvent::from(KeyCode::Char('j')));
-        register.unregister_event(KeyEvent::from(KeyCode::Char('k')));
+        register.unregister_event("desc");
     }
 }
 

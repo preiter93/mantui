@@ -38,6 +38,7 @@ const ANSI_RESET: &str = "\x1B[0m";
 const ANSI_BOLD: &str = "\x1B[1m";
 #[allow(unused)]
 const ANSI_ITALIC: &str = "\x1B[3m";
+#[allow(unused)]
 const ANSI_UNDERLINE: &str = "\x1B[4m";
 
 const ANSI_RED: &str = "\x1B[31m";
@@ -96,7 +97,7 @@ fn formatted_char(ch: char, format: &str) -> String {
 
 fn remove_redundant_ansi(result: &mut String) {
     *result = result.replace(&format!("{ANSI_RESET}{ANSI_BOLD}"), "");
-    *result = result.replace(&format!("{ANSI_RESET}{ANSI_UNDERLINE}"), "");
+    *result = result.replace(&format!("{ANSI_RESET}{ANSI_RED}"), "");
 }
 
 #[cfg(test)]
@@ -108,7 +109,10 @@ mod test {
         let man = "COMMAND N\u{8}NA\u{8}AM\u{8}ME\u{8}E";
         let ansi = man_to_ansi(man);
 
-        assert_eq!(ansi, String::from("COMMAND \x1B[1mNAME\x1B[0m"));
+        assert_eq!(
+            ansi,
+            String::from(format!("COMMAND {ANSI_BOLD}NAME{ANSI_RESET}"))
+        );
     }
 
     #[test]
@@ -116,6 +120,6 @@ mod test {
         let man = "_\u{8}N_\u{8}A_\u{8}M_\u{8}E";
         let ansi = man_to_ansi(man);
 
-        assert_eq!(ansi, String::from("\x1B[4mNAME\x1B[0m"));
+        assert_eq!(ansi, String::from(format!("{ANSI_RED}NAME{ANSI_RESET}")));
     }
 }

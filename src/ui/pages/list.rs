@@ -2,31 +2,16 @@ use std::cmp::min;
 
 use ratatui::crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Widget};
+use ratatui::widgets::{Block, Borders, StatefulWidgetRef, Widget};
 use tachyonfx::CenteredShrink;
 use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
-use crate::ui::app::{AppContext, load_commands_in_background};
+use crate::ui::app::{ActivePage, ActiveState, AppState, load_commands_in_background};
+use crate::ui::events::{Event, EventCtrlRc, EventStatefulWidget, EventfulWidget};
 use crate::ui::theme::get_theme;
 
-use super::{ManPageState, Page, drop_page};
-
-#[derive(Default)]
-pub(crate) struct ListPage {}
-
-#[derive(Default)]
-pub(crate) struct ListPageState {
-    pub(crate) commands: Option<Vec<String>>,
-    command_list: ListState,
-    section_list: ListState,
-    num_elements: u16,
-    search_active: bool,
-    search: String,
-    page_width: usize,
-    throbber: ThrobberState,
-    section_active: bool,
-}
+use super::{ManPage, ManPageState};
 
 macro_rules! select_section {
     ($state:expr, $ctx:expr, $section:expr) => {
@@ -42,24 +27,151 @@ macro_rules! select_section {
     };
 }
 
-impl ListPageState {
-    pub(crate) fn new(ctx: &mut AppContext) -> Self {
-        Self::on_mount(ctx);
+#[derive(Default, Clone)]
+pub(crate) struct ListPage {}
 
+impl EventfulWidget<AppState, Event> for ListPage {
+    fn key() -> String {
+        String::from("ListPage")
+    }
+
+    fn handle_events(ctrl: &EventCtrlRc, ctx: &mut AppState, event: &Event, _: Option<Rect>) {
+        let ActiveState::List(state) = &mut ctx.active_state else {
+            return;
+        };
+
+        let Event::Key(key) = event else {
+            return;
+        };
+
+        match key.code {
+            KeyCode::Char('j') if !state.search_active => {
+                if state.section_active {
+                    let s = min(state.section_list.selected.unwrap() + 1, 8);
+                    select_section!(state, ctx, s);
+                } else {
+                    state.command_list.next();
+                }
+            }
+            KeyCode::Char('k') if !state.search_active => {
+                if state.section_active {
+                    let s = state.section_list.selected.unwrap().saturating_sub(1);
+                    select_section!(state, ctx, s);
+                } else {
+                    state.command_list.previous();
+                }
+            }
+            KeyCode::Char('d')
+                if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
+            {
+                for _ in 0..state.num_elements / 2 {
+                    state.command_list.next();
+                }
+            }
+            KeyCode::Char('u')
+                if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
+            {
+                for _ in 0..state.num_elements / 2 {
+                    state.command_list.previous();
+                }
+            }
+            KeyCode::Char('1') if !state.search_active => {
+                select_section!(state, ctx, 0);
+            }
+            KeyCode::Char('2') if !state.search_active => {
+                select_section!(state, ctx, 1);
+            }
+            KeyCode::Char('3') if !state.search_active => {
+                select_section!(state, ctx, 2);
+            }
+            KeyCode::Char('4') if !state.search_active => {
+                select_section!(state, ctx, 3);
+            }
+            KeyCode::Char('5') if !state.search_active => {
+                select_section!(state, ctx, 4);
+            }
+            KeyCode::Char('6') if !state.search_active => {
+                select_section!(state, ctx, 5);
+            }
+            KeyCode::Char('7') if !state.search_active => {
+                select_section!(state, ctx, 6);
+            }
+            KeyCode::Char('8') if !state.search_active => {
+                select_section!(state, ctx, 7);
+            }
+            KeyCode::Char('9') if !state.search_active => {
+                select_section!(state, ctx, 8);
+            }
+            KeyCode::Enter if !state.search_active => {
+                if state.section_active {
+                    state.section_active = false;
+                    return;
+                }
+
+                if let Some(command) = state.selected_commands() {
+                    ctx.search = state.search.clone();
+                    ctx.selected_command = state.command_list.selected;
+
+                    let width = state.page_width;
+
+                    let page_state = ManPageState::new(&command, width);
+                    ctx.active_state = ActiveState::Man(page_state);
+
+                    let page = EventStatefulWidget::new(ManPage {}, ctrl);
+                    ctx.active_page = ActivePage::Man(page);
+                }
+            }
+            KeyCode::Char('/') if !state.search_active => {
+                state.search_active = true;
+                state.command_list.selected = None;
+            }
+            KeyCode::Esc | KeyCode::Enter if state.search_active => {
+                state.search_active = false;
+            }
+            KeyCode::Esc if !state.search_active => {
+                state.search = String::new();
+                state.command_list.selected = None;
+            }
+            KeyCode::Backspace if state.search_active => {
+                state.search.pop();
+            }
+            KeyCode::Char(ch) if state.search_active => {
+                state.search.push(ch);
+            }
+            _ => {}
+        }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct ListPageState {
+    pub(crate) commands: Option<Vec<String>>,
+    command_list: ListState,
+    section_list: ListState,
+    num_elements: u16,
+    search_active: bool,
+    search: String,
+    page_width: usize,
+    throbber: ThrobberState,
+    section_active: bool,
+}
+
+impl ListPageState {
+    pub(crate) fn new(state: &mut AppState) -> Self {
         let mut command_list = ListState::default();
-        command_list.select(ctx.selected_command);
+        command_list.select(state.selected_command);
 
         let mut section_list = ListState::default();
-        section_list.select(Some(ctx.selected_section));
+        section_list.select(Some(state.selected_section));
 
         Self {
-            commands: ctx.commands.clone(),
+            commands: state.commands.clone(),
             command_list,
             section_list,
             num_elements: 0,
             search_active: false,
             section_active: false,
-            search: ctx.search.clone(),
+            search: state.search.clone(),
             page_width: 0,
             throbber: ThrobberState::default(),
         }
@@ -86,113 +198,12 @@ impl ListPageState {
 
         self.command_list.selected.map(|i| commands[i].clone())
     }
-
-    pub(crate) fn on_mount(ctx: &mut AppContext) {
-        ctx.notifier.listen("list", |(ctx, key)| {
-            let Page::List(state) = &mut ctx.current_page else {
-                return;
-            };
-
-            match key.code {
-                KeyCode::Char('j') if !state.search_active => {
-                    if state.section_active {
-                        let s = min(state.section_list.selected.unwrap() + 1, 8);
-                        select_section!(state, ctx, s);
-                    } else {
-                        state.command_list.next();
-                    }
-                }
-                KeyCode::Char('k') if !state.search_active => {
-                    if state.section_active {
-                        let s = state.section_list.selected.unwrap().saturating_sub(1);
-                        select_section!(state, ctx, s);
-                    } else {
-                        state.command_list.previous();
-                    }
-                }
-                KeyCode::Char('d')
-                    if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
-                {
-                    for _ in 0..state.num_elements / 2 {
-                        state.command_list.next();
-                    }
-                }
-                KeyCode::Char('u')
-                    if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
-                {
-                    for _ in 0..state.num_elements / 2 {
-                        state.command_list.previous();
-                    }
-                }
-                KeyCode::Char('1') if !state.search_active => {
-                    select_section!(state, ctx, 0);
-                }
-                KeyCode::Char('2') if !state.search_active => {
-                    select_section!(state, ctx, 1);
-                }
-                KeyCode::Char('3') if !state.search_active => {
-                    select_section!(state, ctx, 2);
-                }
-                KeyCode::Char('4') if !state.search_active => {
-                    select_section!(state, ctx, 3);
-                }
-                KeyCode::Char('5') if !state.search_active => {
-                    select_section!(state, ctx, 4);
-                }
-                KeyCode::Char('6') if !state.search_active => {
-                    select_section!(state, ctx, 5);
-                }
-                KeyCode::Char('7') if !state.search_active => {
-                    select_section!(state, ctx, 6);
-                }
-                KeyCode::Char('8') if !state.search_active => {
-                    select_section!(state, ctx, 7);
-                }
-                KeyCode::Char('9') if !state.search_active => {
-                    select_section!(state, ctx, 8);
-                }
-                KeyCode::Enter if !state.search_active => {
-                    if state.section_active {
-                        state.section_active = false;
-                        return;
-                    }
-
-                    if let Some(command) = state.selected_commands() {
-                        ctx.search = state.search.clone();
-                        ctx.selected_command = state.command_list.selected;
-
-                        let width = state.page_width;
-                        drop_page(ctx);
-                        ctx.current_page = Page::Desc(ManPageState::new(ctx, &command, width));
-                    }
-                }
-                KeyCode::Char('/') if !state.search_active => {
-                    state.search_active = true;
-                    state.command_list.selected = None;
-                }
-                KeyCode::Esc | KeyCode::Enter if state.search_active => {
-                    state.search_active = false;
-                }
-                KeyCode::Backspace if state.search_active => {
-                    state.search.pop();
-                }
-                KeyCode::Char(ch) if state.search_active => {
-                    state.search.push(ch);
-                }
-                _ => {}
-            }
-        });
-    }
-
-    pub(crate) fn on_drop(ctx: &mut AppContext) {
-        ctx.notifier.unlisten("home");
-    }
 }
 
-impl StatefulWidget for ListPage {
+impl StatefulWidgetRef for ListPage {
     type State = ListPageState;
 
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
         state.page_width = area.width as usize;
 

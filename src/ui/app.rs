@@ -1,7 +1,13 @@
 use anyhow::Result;
-use ratatui::prelude::*;
+use ratatui::widgets::StatefulWidgetRef;
+use ratatui::{
+    crossterm::event::{KeyCode, KeyModifiers},
+    prelude::*,
+};
 use std::{
+    cell::RefCell,
     marker::PhantomData,
+    rc::Rc,
     sync::{Arc, Mutex, mpsc},
     thread::{self},
     time::Duration,
@@ -10,41 +16,58 @@ use uuid::Uuid;
 
 use crate::core::load_section;
 
+use super::events::{EventCtrlRc, EventStatefulWidget, handle_events};
+use super::pages::{ManPage, ManPageState};
 use super::{
-    events::{Event, EventHandler, EventNotifier, InternalEvent},
-    pages::{HomePage, HomePageState, ListPage, ManPage, Page},
+    events::{Event, EventCtrl, InternalEvent, emit_events},
+    pages::{HomePage, HomePageState, ListPage, ListPageState},
     terminal::Terminal,
 };
 
 pub struct App<'a> {
-    pub(super) ctx: AppContext,
     _phantom: PhantomData<&'a ()>,
-    pub(super) events: EventHandler,
 }
 
-pub(super) struct AppContext {
+pub enum ActivePage {
+    Home(EventStatefulWidget<AppState, Event, HomePage>),
+    List(EventStatefulWidget<AppState, Event, ListPage>),
+    Man(EventStatefulWidget<AppState, Event, ManPage>),
+}
+pub enum ActiveState {
+    Home(HomePageState),
+    List(ListPageState),
+    Man(ManPageState),
+}
+
+pub struct AppState {
     pub(super) should_quit: bool,
-    pub(super) current_page: Page,
-    pub(super) notifier: EventNotifier,
-    pub(super) search: String,
+    pub(super) active_page: ActivePage,
+    pub(super) active_state: ActiveState,
+
     pub(super) selected_command: Option<usize>,
     pub(super) selected_section: usize,
     pub(super) commands: Option<Vec<String>>,
+
+    pub(super) search: String,
+
     pub(crate) sx: mpsc::Sender<Event>,
     debouncer: Arc<Mutex<Uuid>>,
 }
 
-impl AppContext {
-    fn new(sx: mpsc::Sender<Event>) -> Self {
+impl AppState {
+    pub(super) fn new(controller: &Rc<RefCell<EventCtrl>>) -> Self {
+        let page = HomePage {};
+        let state = HomePageState::new();
+
         Self {
-            current_page: Page::None,
             should_quit: false,
-            notifier: EventNotifier::default(),
-            search: String::new(),
+            active_page: ActivePage::Home(EventStatefulWidget::new(page, controller)),
+            active_state: ActiveState::Home(state),
             selected_command: None,
             selected_section: 0,
             commands: None,
-            sx,
+            search: String::new(),
+            sx: controller.borrow().sender.clone(),
             debouncer: Arc::new(Mutex::new(Uuid::new_v4())),
         }
     }
@@ -53,16 +76,7 @@ impl AppContext {
 impl App<'_> {
     #[allow(clippy::needless_pass_by_value)]
     pub fn new() -> App<'static> {
-        let events = EventHandler::new(100);
-        let ctx = AppContext::new(events.sx.clone());
-
-        // Loading the man commands takes some time,
-        // thuse they are loaded in the background.
-        load_commands_in_background(&ctx, 0);
-
         App {
-            ctx,
-            events,
             _phantom: PhantomData,
         }
     }
@@ -71,14 +85,22 @@ impl App<'_> {
         let mut terminal = Terminal::new()?;
         let mut app = Self::new();
 
-        let state = HomePageState::new(&mut app.ctx);
-        app.ctx.current_page = Page::Home(state);
+        let controller = EventCtrl::new();
+        let mut state = AppState::new(&controller);
+        emit_events(&controller.borrow(), 50);
 
-        while !app.ctx.should_quit {
+        // Register global events.
+        register_global_events(&controller);
+
+        // Loading the man commands takes some time,
+        // thuse they are loaded in the background.
+        load_commands_in_background(&state, 0);
+
+        while !state.should_quit {
             terminal.draw(|frame| {
-                frame.render_widget(&mut app, frame.area());
+                frame.render_stateful_widget(&mut app, frame.area(), &mut state);
             })?;
-            app.events.handle(&mut app.ctx)?;
+            handle_events(&controller, &mut state).unwrap();
         }
 
         Terminal::stop()?;
@@ -86,27 +108,47 @@ impl App<'_> {
     }
 }
 
-impl Widget for &mut App<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        match &mut self.ctx.current_page {
-            Page::Home(state) => {
-                let page = HomePage::default();
-                page.render(area, buf, state);
+pub fn register_global_events(controller: &EventCtrlRc) {
+    controller
+        .borrow_mut()
+        .add_listener("main", |_, state, event| match event {
+            Event::Key(key) => {
+                if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
+                    state.should_quit = true;
+                }
             }
-            Page::List(state) => {
-                let page = ListPage::default();
-                page.render(area, buf, state);
+            Event::Internal(InternalEvent::Loaded((commands, section))) => {
+                if state.selected_section == *section {
+                    state.commands = Some(commands.clone());
+                    if let ActiveState::List(state) = &mut state.active_state {
+                        state.commands = Some(commands.clone());
+                    }
+                }
             }
-            Page::Desc(state) => {
-                let page = ManPage::default();
-                page.render(area, buf, state);
+            _ => {}
+        });
+}
+
+impl StatefulWidget for &mut App<'_> {
+    type State = AppState;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        match (&state.active_page, &mut state.active_state) {
+            (ActivePage::Home(page), ActiveState::Home(state)) => {
+                page.render_ref(area, buf, state);
             }
-            Page::None => {}
+            (ActivePage::List(page), ActiveState::List(state)) => {
+                page.render_ref(area, buf, state);
+            }
+            (ActivePage::Man(page), ActiveState::Man(state)) => {
+                page.render_ref(area, buf, state);
+            }
+            _ => {}
         }
     }
 }
 
-pub(crate) fn load_commands_in_background(ctx: &AppContext, section: usize) {
+pub(crate) fn load_commands_in_background(ctx: &AppState, section: usize) {
     let uuid = Uuid::new_v4();
 
     let sx1 = ctx.sx.clone();

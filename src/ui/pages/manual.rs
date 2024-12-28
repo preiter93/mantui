@@ -4,7 +4,11 @@ use std::cmp::min;
 
 use crate::{
     core::get_manual,
-    ui::{app::AppContext, theme::get_theme},
+    ui::{
+        app::{ActivePage, ActiveState, AppState},
+        events::{Event, EventCtrlRc, EventStatefulWidget, EventfulWidget},
+        theme::get_theme,
+    },
 };
 use ansi_to_tui::IntoText;
 use ratatui::{
@@ -13,13 +17,94 @@ use ratatui::{
     prelude::*,
     widgets::{
         Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+        StatefulWidgetRef,
     },
 };
 
-use super::{ListPageState, Page, drop_page};
+use super::{ListPage, ListPageState};
 
 #[derive(Default)]
 pub(crate) struct ManPage {}
+
+impl EventfulWidget<AppState, Event> for ManPage {
+    fn key() -> String {
+        String::from("ManPage")
+    }
+
+    fn handle_events(ctrl: &EventCtrlRc, ctx: &mut AppState, event: &Event, _: Option<Rect>) {
+        let ActiveState::Man(state) = &mut ctx.active_state else {
+            return;
+        };
+
+        let Event::Key(event) = event else {
+            return;
+        };
+
+        match event.code {
+            KeyCode::Char(ch)
+                if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
+            {
+                state.selected_match = None;
+                state.search.push(ch);
+                state.matches = find_matches_positions(&state.text, &state.search);
+                state.select_next_search();
+            }
+            KeyCode::Char('j') => {
+                state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
+            }
+            KeyCode::Char('k') => {
+                state.scroll_pos = state.scroll_pos.saturating_sub(1);
+            }
+            KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
+                state.scroll_pos = min(
+                    state.scroll_pos + state.page_height / 2,
+                    state.max_scroll_pos,
+                );
+            }
+            KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
+                state.scroll_pos = state.scroll_pos.saturating_sub(state.page_height / 2);
+            }
+            KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
+                state.scroll_pos = state.max_scroll_pos;
+            }
+            KeyCode::Char('g') => {
+                state.scroll_pos = 0;
+            }
+
+            KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
+                state.select_previous_search();
+            }
+            KeyCode::Char('n') => {
+                state.select_next_search();
+            }
+            KeyCode::Char('/') => {
+                state.search_active = true;
+            }
+            KeyCode::Backspace if state.search_active => {
+                state.search.pop();
+            }
+            KeyCode::Esc => {
+                if state.search_active {
+                    state.search_active = false;
+                } else if state.search.is_empty() {
+                    let page_state = ListPageState::new(ctx);
+                    ctx.active_state = ActiveState::List(page_state);
+
+                    let page = EventStatefulWidget::new(ListPage {}, ctrl);
+                    ctx.active_page = ActivePage::List(page);
+                } else {
+                    state.search = String::new();
+                    state.matches = Vec::new();
+                    state.selected_match = None;
+                }
+            }
+            KeyCode::Enter if state.search_active => {
+                state.search_active = false;
+            }
+            _ => {}
+        }
+    }
+}
 
 #[derive(Default)]
 pub(crate) struct ManPageState {
@@ -35,77 +120,6 @@ pub(crate) struct ManPageState {
 }
 
 impl ManPageState {
-    pub(crate) fn on_mount(ctx: &mut AppContext) {
-        ctx.notifier.listen("desc", |(ctx, event)| {
-            let Page::Desc(state) = &mut ctx.current_page else {
-                return;
-            };
-
-            match event.code {
-                KeyCode::Char(ch)
-                    if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
-                {
-                    state.selected_match = None;
-                    state.search.push(ch);
-                    state.matches = find_matches_positions(&state.text, &state.search);
-                    state.select_next_search();
-                }
-                KeyCode::Char('j') => {
-                    state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
-                }
-                KeyCode::Char('k') => {
-                    state.scroll_pos = state.scroll_pos.saturating_sub(1);
-                }
-                KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
-                    state.scroll_pos = min(
-                        state.scroll_pos + state.page_height / 2,
-                        state.max_scroll_pos,
-                    );
-                }
-                KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
-                    state.scroll_pos = state.scroll_pos.saturating_sub(state.page_height / 2);
-                }
-                KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
-                    state.scroll_pos = state.max_scroll_pos;
-                }
-                KeyCode::Char('g') => {
-                    state.scroll_pos = 0;
-                }
-
-                KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
-                    state.select_previous_search();
-                }
-                KeyCode::Char('n') => {
-                    state.select_next_search();
-                }
-                KeyCode::Char('/') => {
-                    state.search_active = true;
-                }
-                KeyCode::Backspace if state.search_active => {
-                    state.search.pop();
-                }
-                KeyCode::Esc => {
-                    if state.search_active {
-                        state.search_active = false;
-                    } else {
-                        if state.search.is_empty() {
-                            drop_page(ctx);
-                            ctx.current_page = Page::List(ListPageState::new(ctx));
-                        } else {
-                            state.search = String::new();
-                            state.matches = Vec::new();
-                            state.selected_match = None;
-                        }
-                    }
-                }
-                KeyCode::Enter if state.search_active => {
-                    state.search_active = false;
-                }
-                _ => {}
-            }
-        });
-    }
-
     pub fn select_next_search(&mut self) {
         if self.matches.is_empty() {
             return;
@@ -175,15 +189,10 @@ impl ManPageState {
 
         None
     }
-
-    pub(crate) fn on_drop(ctx: &mut AppContext) {
-        ctx.notifier.unlisten("desc");
-    }
 }
 
 impl ManPageState {
-    pub(crate) fn new(ctx: &mut AppContext, command: &str, width: usize) -> Self {
-        Self::on_mount(ctx);
+    pub(crate) fn new(command: &str, width: usize) -> Self {
         let reduced_width = (width as f64 * 0.9) as u16;
 
         let width = format!("{reduced_width}");
@@ -208,9 +217,10 @@ impl ManPageState {
     }
 }
 
-impl StatefulWidget for ManPage {
+impl StatefulWidgetRef for ManPage {
     type State = ManPageState;
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let [main, search] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(1)])

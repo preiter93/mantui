@@ -43,7 +43,7 @@ pub enum Event {
 }
 
 pub(crate) type EventCtrl = EventController<AppState, Event>;
-pub(crate) type EventCtrlRc = Rc<RefCell<EventController<AppState, Event>>>;
+pub(crate) type EventCtrlRc = EventControllerRc<AppState, Event>;
 
 /// Emits regular tick events in a separate thread.
 pub(crate) fn emit_events(ctrl: &EventCtrl, tick_rate_ms: u64) {
@@ -87,7 +87,9 @@ type EventCallback<S, E> = Rc<dyn Fn(&Rc<RefCell<EventController<S, E>>>, &mut S
 ///
 /// ```
 /// use ratatui::prelude::*;
-/// use tui_event_controller::{EventController, EventWidget, EventfulWidget};
+/// use ratatui::widgets::WidgetRef;
+/// use tui_event_controller::{EventWidget, EventfulWidget};
+/// use tui_event_controller::{EventController, EventControllerRc};
 ///
 /// #[derive(Default)]
 /// struct AppState {
@@ -101,12 +103,13 @@ type EventCallback<S, E> = Rc<dyn Fn(&Rc<RefCell<EventController<S, E>>>, &mut S
 /// }
 ///
 /// type AppEventController = EventController<AppState, AppEvent>;
+/// type AppEventControllerRc = EventControllerRc<AppState, AppEvent>;
 ///
 /// #[derive(Default)]
 /// struct MyWidget {}
 ///
-/// impl Widget for &MyWidget {
-///     fn render(self, area: Rect, buf: &mut Buffer) {}
+/// impl WidgetRef for MyWidget {
+///     fn render_ref(&self, area: Rect, buf: &mut Buffer) {}
 /// }
 ///
 /// impl MyWidget {
@@ -123,7 +126,7 @@ type EventCallback<S, E> = Rc<dyn Fn(&Rc<RefCell<EventController<S, E>>>, &mut S
 ///     }
 ///
 ///     fn handle_events(
-///         ctrl: &mut AppEventController,
+///         ctrl: &AppEventControllerRc,
 ///         state: &mut AppState,
 ///         event: &AppEvent,
 ///         area: Option<Rect>,
@@ -149,6 +152,9 @@ pub struct EventController<S, E> {
     /// Registered callbacks.
     callbacks: HashMap<String, EventCallback<S, E>>,
 }
+
+/// A typedef for an event controller in a rc pointer.
+pub type EventControllerRc<S, E> = Rc<RefCell<EventController<S, E>>>;
 
 impl<S, E> EventController<S, E> {
     /// Creates a new instance of [`EventHandler`].

@@ -1,11 +1,11 @@
 use super::{ListPage, ListPageState, utils::centered_rect};
 use crate::ui::{
     app::{ActivePage, ActiveState, AppState},
-    events::{Event, EventContext, EventfulWidget, IStatefulWidget},
+    events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget},
     theme::get_theme,
 };
 use ratatui::{
-    crossterm::event::KeyCode,
+    crossterm::event::{KeyCode, MouseEventKind},
     prelude::*,
     widgets::{Paragraph, StatefulWidgetRef},
 };
@@ -28,12 +28,12 @@ impl EventfulWidget<AppState, Event> for HomePage {
     fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
         if let Event::Key(key) = ctx.event {
             if key.code == KeyCode::Enter {
-                let page_state = ListPageState::new(state);
-                state.active_state = ActiveState::List(page_state);
-
-                let page = ListPage::new(ctx.controller);
-                let page = IStatefulWidget::new(page, ctx.controller);
-                state.active_page = ActivePage::List(page);
+                next_page(ctx.controller, state);
+            }
+        }
+        if let Event::Mouse(event) = ctx.event {
+            if let MouseEventKind::Down(_) = event.kind {
+                next_page(ctx.controller, state);
             }
         }
     }
@@ -49,6 +49,15 @@ impl HomePageState {
             last_frame: Instant::now(),
         }
     }
+}
+
+fn next_page(controller: &EventController, state: &mut AppState) {
+    let page_state = ListPageState::new(state);
+    state.active_state = ActiveState::List(page_state);
+
+    let page = ListPage::new(controller);
+    let page = IStatefulWidget::new(page, controller);
+    state.active_page = ActivePage::List(page);
 }
 
 impl StatefulWidgetRef for HomePage {

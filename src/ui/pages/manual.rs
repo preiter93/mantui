@@ -6,7 +6,7 @@ use crate::{
     core::get_manual,
     ui::{
         app::{ActivePage, ActiveState, AppState},
-        events::{Event, EventCtrlRc, EventStatefulWidget, EventfulWidget},
+        events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget},
         theme::get_theme,
     },
 };
@@ -24,88 +24,92 @@ use ratatui::{
 use super::{ListPage, ListPageState};
 
 pub(crate) struct ManPage {
-    paragraph: EventStatefulWidget<AppState, Event, Content>,
+    content: IStatefulWidget<Content>,
 }
 
 impl ManPage {
-    pub(crate) fn new(controller: &EventCtrlRc) -> Self {
+    pub(crate) fn new(controller: &EventController) -> Self {
         Self {
-            paragraph: EventStatefulWidget::new(Content {}, controller),
+            content: IStatefulWidget::new(Content, controller),
         }
     }
 }
 
 impl EventfulWidget<AppState, Event> for ManPage {
-    fn key() -> String {
+    fn unique_key() -> String {
         String::from("ManPage")
     }
 
-    fn handle_events(ctrl: &EventCtrlRc, ctx: &mut AppState, event: &Event, _: Option<Rect>) {
-        let ActiveState::Man(state) = &mut ctx.active_state else {
+    fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
+        let ActiveState::Man(page_state) = &mut state.active_state else {
             return;
         };
 
-        if let Event::Key(event) = event {
+        if let Event::Key(event) = ctx.event {
             match event.code {
                 KeyCode::Char(ch)
-                    if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
+                    if page_state.search_active && event.modifiers != KeyModifiers::CONTROL =>
                 {
-                    state.selected_match = None;
-                    state.search.push(ch);
-                    state.matches = find_matches_positions(&state.text, &state.search);
-                    state.select_next_search();
+                    page_state.selected_match = None;
+                    page_state.search.push(ch);
+                    page_state.matches =
+                        find_matches_positions(&page_state.text, &page_state.search);
+                    page_state.select_next_search();
                 }
                 KeyCode::Char('j') => {
-                    state.scroll_up();
+                    page_state.scroll_down();
                 }
                 KeyCode::Char('k') => {
-                    state.scroll_down();
+                    page_state.scroll_up();
                 }
                 KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
-                    state.scroll_pos = min(
-                        state.scroll_pos + state.page_height / 2,
-                        state.max_scroll_pos,
+                    page_state.scroll_pos = min(
+                        page_state.scroll_pos + page_state.page_height / 2,
+                        page_state.max_scroll_pos,
                     );
                 }
                 KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
-                    state.scroll_pos = state.scroll_pos.saturating_sub(state.page_height / 2);
+                    page_state.scroll_pos = page_state
+                        .scroll_pos
+                        .saturating_sub(page_state.page_height / 2);
                 }
                 KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
-                    state.scroll_pos = state.max_scroll_pos;
+                    page_state.scroll_pos = page_state.max_scroll_pos;
                 }
                 KeyCode::Char('g') => {
-                    state.scroll_pos = 0;
+                    page_state.scroll_pos = 0;
                 }
 
                 KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
-                    state.select_previous_search();
+                    page_state.select_previous_search();
                 }
                 KeyCode::Char('n') => {
-                    state.select_next_search();
+                    page_state.select_next_search();
                 }
                 KeyCode::Char('/') => {
-                    state.search_active = true;
+                    page_state.search_active = true;
                 }
-                KeyCode::Backspace if state.search_active => {
-                    state.search.pop();
+                KeyCode::Backspace if page_state.search_active => {
+                    page_state.search.pop();
                 }
                 KeyCode::Esc => {
-                    if state.search_active {
-                        state.search_active = false;
-                    } else if state.search.is_empty() {
-                        let page_state = ListPageState::new(ctx);
-                        ctx.active_state = ActiveState::List(page_state);
+                    if page_state.search_active {
+                        page_state.search_active = false;
+                    } else if page_state.search.is_empty() {
+                        let page_state = ListPageState::new(state);
+                        state.active_state = ActiveState::List(page_state);
 
-                        let page = EventStatefulWidget::new(ListPage::new(ctrl), ctrl);
-                        ctx.active_page = ActivePage::List(page);
+                        let page = ListPage::new(ctx.controller);
+                        let page = IStatefulWidget::new(page, ctx.controller);
+                        state.active_page = ActivePage::List(page);
                     } else {
-                        state.search = String::new();
-                        state.matches = Vec::new();
-                        state.selected_match = None;
+                        page_state.search = String::new();
+                        page_state.matches = Vec::new();
+                        page_state.selected_match = None;
                     }
                 }
-                KeyCode::Enter if state.search_active => {
-                    state.search_active = false;
+                KeyCode::Enter if page_state.search_active => {
+                    page_state.search_active = false;
                 }
                 _ => {}
             }
@@ -257,7 +261,7 @@ impl StatefulWidgetRef for ManPage {
         block.render(main, buf);
 
         // // Render the paragraph.
-        self.paragraph.render_ref(inner, buf, state);
+        self.content.render_ref(inner, buf, state);
 
         // Render the scrollbar.
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -309,44 +313,31 @@ impl StatefulWidgetRef for ManPage {
     }
 }
 
-pub(crate) struct Content {}
+pub(crate) struct Content;
 
 impl EventfulWidget<AppState, Event> for Content {
-    fn key() -> String {
-        String::from("ManPageParagraph")
+    fn unique_key() -> String {
+        String::from("ManPageContent")
     }
 
-    fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
-        let ActiveState::Man(state) = &mut ctx.active_state else {
+    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::Man(page_state) = &mut state.active_state else {
             return;
         };
 
-        if let Event::Mouse(e) = event {
+        if let Event::Mouse(e) = ctx.event {
             let position = Position::new(e.column, e.row);
             let Some(area) = area else {
                 return;
             };
-
-            match e.kind {
-                MouseEventKind::ScrollUp => state.scroll_up(),
-                MouseEventKind::ScrollDown => state.scroll_down(),
-                _ => {}
+            if !area.contains(position) {
+                return;
             }
 
-            // if position.y >= area.bottom() {
-            //     state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
-            // }
-            // if position.y < area.y {
-            //     state.scroll_pos = state.scroll_pos.saturating_sub(1);
-            // }
-            //
-            // if let
-            // log_to_file(format!("{:} {}", position.y, area.bottom()));
-
-            if area.contains(position) {
-                // log_to_file(format!("MOUSE EVENT {area:?}"));
-            } else {
-                // log_to_file(format!("MOUSE EVENT MISSED"));
+            match e.kind {
+                MouseEventKind::ScrollUp => page_state.scroll_up(),
+                MouseEventKind::ScrollDown => page_state.scroll_down(),
+                _ => {}
             }
         }
     }

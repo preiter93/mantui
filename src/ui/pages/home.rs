@@ -1,7 +1,7 @@
 use super::{ListPage, ListPageState, utils::centered_rect};
 use crate::ui::{
     app::{ActivePage, ActiveState, AppState},
-    events::{Event, EventCtrl, EventStatefulWidget, EventfulWidget},
+    events::{Event, EventContext, EventfulWidget, IStatefulWidget},
     theme::get_theme,
 };
 use ratatui::{
@@ -9,7 +9,7 @@ use ratatui::{
     prelude::*,
     widgets::{Paragraph, StatefulWidgetRef},
 };
-use std::{cell::RefCell, rc::Rc, time::Instant};
+use std::time::Instant;
 use tachyonfx::{CenteredShrink, Effect, EffectTimer, Interpolation, Shader, fx};
 
 #[derive(Default, Clone)]
@@ -21,22 +21,18 @@ pub(crate) struct HomePageState {
 }
 
 impl EventfulWidget<AppState, Event> for HomePage {
-    fn key() -> String {
+    fn unique_key() -> String {
         String::from("HomePage")
     }
 
-    fn handle_events(
-        ctrl: &Rc<RefCell<EventCtrl>>,
-        state: &mut AppState,
-        event: &Event,
-        _: Option<Rect>,
-    ) {
-        if let Event::Key(key) = event {
+    fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
+        if let Event::Key(key) = ctx.event {
             if key.code == KeyCode::Enter {
                 let page_state = ListPageState::new(state);
                 state.active_state = ActiveState::List(page_state);
 
-                let page = EventStatefulWidget::new(ListPage::new(ctrl), ctrl);
+                let page = ListPage::new(ctx.controller);
+                let page = IStatefulWidget::new(page, ctx.controller);
                 state.active_page = ActivePage::List(page);
             }
         }

@@ -5,9 +5,7 @@ use ratatui::{
     prelude::*,
 };
 use std::{
-    cell::RefCell,
     marker::PhantomData,
-    rc::Rc,
     sync::{Arc, Mutex, mpsc},
     thread::{self},
     time::Duration,
@@ -16,10 +14,10 @@ use uuid::Uuid;
 
 use crate::core::load_section;
 
-use super::events::{EventCtrlRc, EventStatefulWidget, handle_events};
+use super::events::{EventController, IStatefulWidget};
 use super::pages::{ManPage, ManPageState};
 use super::{
-    events::{Event, EventCtrl, InternalEvent, emit_events},
+    events::{Event, InternalEvent, spawn_event_loop},
     pages::{HomePage, HomePageState, ListPage, ListPageState},
     terminal::Terminal,
 };
@@ -29,9 +27,9 @@ pub struct App<'a> {
 }
 
 pub enum ActivePage {
-    Home(EventStatefulWidget<AppState, Event, HomePage>),
-    List(EventStatefulWidget<AppState, Event, ListPage>),
-    Man(EventStatefulWidget<AppState, Event, ManPage>),
+    Home(IStatefulWidget<HomePage>),
+    List(IStatefulWidget<ListPage>),
+    Man(IStatefulWidget<ManPage>),
 }
 pub enum ActiveState {
     Home(HomePageState),
@@ -55,19 +53,19 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub(super) fn new(controller: &Rc<RefCell<EventCtrl>>) -> Self {
+    pub(super) fn new(controller: &EventController) -> Self {
         let page = HomePage {};
         let state = HomePageState::new();
 
         Self {
             should_quit: false,
-            active_page: ActivePage::Home(EventStatefulWidget::new(page, controller)),
+            active_page: ActivePage::Home(IStatefulWidget::new(page, controller)),
             active_state: ActiveState::Home(state),
             selected_command: None,
             selected_section: 0,
             commands: None,
             search: String::new(),
-            sx: controller.borrow().sender.clone(),
+            sx: controller.get_sender(),
             debouncer: Arc::new(Mutex::new(Uuid::new_v4())),
         }
     }
@@ -83,11 +81,12 @@ impl App<'_> {
 
     pub fn run() -> Result<()> {
         let mut terminal = Terminal::new()?;
-        let mut app = Self::new();
 
-        let controller = EventCtrl::new();
+        let controller = EventController::new();
+        spawn_event_loop(&controller, 50);
+
+        let mut app = Self::new();
         let mut state = AppState::new(&controller);
-        emit_events(&controller.borrow(), 50);
 
         // Register global events.
         register_global_events(&controller);
@@ -100,7 +99,7 @@ impl App<'_> {
             terminal.draw(|frame| {
                 frame.render_stateful_widget(&mut app, frame.area(), &mut state);
             })?;
-            handle_events(&controller, &mut state).unwrap();
+            controller.recv_and_notify(&mut state)?;
         }
 
         Terminal::stop()?;
@@ -108,25 +107,23 @@ impl App<'_> {
     }
 }
 
-pub fn register_global_events(controller: &EventCtrlRc) {
-    controller
-        .borrow_mut()
-        .add_listener("main", |_, state, event| match event {
-            Event::Key(key) => {
-                if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
-                    state.should_quit = true;
-                }
+pub fn register_global_events(controller: &EventController) {
+    controller.add_listener("main", |ctx, state| match ctx.event {
+        Event::Key(key) => {
+            if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
+                state.should_quit = true;
             }
-            Event::Internal(InternalEvent::Loaded((commands, section))) => {
-                if state.selected_section == *section {
+        }
+        Event::Internal(InternalEvent::Loaded((commands, section))) => {
+            if state.selected_section == *section {
+                state.commands = Some(commands.clone());
+                if let ActiveState::List(state) = &mut state.active_state {
                     state.commands = Some(commands.clone());
-                    if let ActiveState::List(state) = &mut state.active_state {
-                        state.commands = Some(commands.clone());
-                    }
                 }
             }
-            _ => {}
-        });
+        }
+        _ => {}
+    });
 }
 
 impl StatefulWidget for &mut App<'_> {

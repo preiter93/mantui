@@ -8,7 +8,7 @@ use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
 use crate::ui::app::{ActivePage, ActiveState, AppState, load_commands_in_background};
-use crate::ui::events::{Event, EventCtrlRc, EventStatefulWidget, EventfulWidget};
+use crate::ui::events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget};
 use crate::ui::theme::get_theme;
 
 use super::{ManPage, ManPageState};
@@ -28,127 +28,128 @@ macro_rules! select_section {
 }
 
 pub(crate) struct ListPage {
-    commands: EventStatefulWidget<AppState, Event, CommandList>,
-    search: EventStatefulWidget<AppState, Event, Search>,
+    commands: IStatefulWidget<CommandList>,
+    search: IStatefulWidget<Search>,
 }
 
 impl ListPage {
-    pub(crate) fn new(controller: &EventCtrlRc) -> Self {
+    pub(crate) fn new(controller: &EventController) -> Self {
         Self {
-            commands: EventStatefulWidget::new(CommandList {}, controller),
-            search: EventStatefulWidget::new(Search {}, controller),
+            commands: IStatefulWidget::new(CommandList, controller),
+            search: IStatefulWidget::new(Search, controller),
         }
     }
 }
 
 impl EventfulWidget<AppState, Event> for ListPage {
-    fn key() -> String {
+    fn unique_key() -> String {
         String::from("ListPage")
     }
 
-    fn handle_events(ctrl: &EventCtrlRc, ctx: &mut AppState, event: &Event, _: Option<Rect>) {
-        let ActiveState::List(state) = &mut ctx.active_state else {
+    fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
+        let ActiveState::List(page_state) = &mut state.active_state else {
             return;
         };
 
-        let Event::Key(key) = event else {
+        let Event::Key(key) = ctx.event else {
             return;
         };
 
         match key.code {
-            KeyCode::Char('j') if !state.search_active => {
-                if state.section_active {
-                    let s = min(state.section_list.selected.unwrap() + 1, 8);
-                    select_section!(state, ctx, s);
+            KeyCode::Char('j') if !page_state.search_active => {
+                if page_state.section_active {
+                    let s = min(page_state.section_list.selected.unwrap() + 1, 8);
+                    select_section!(page_state, state, s);
                 } else {
-                    state.scroll_down();
+                    page_state.scroll_down();
                 }
             }
-            KeyCode::Char('k') if !state.search_active => {
-                if state.section_active {
-                    let s = state.section_list.selected.unwrap().saturating_sub(1);
-                    select_section!(state, ctx, s);
+            KeyCode::Char('k') if !page_state.search_active => {
+                if page_state.section_active {
+                    let s = page_state.section_list.selected.unwrap().saturating_sub(1);
+                    select_section!(page_state, state, s);
                 } else {
-                    state.scroll_up();
+                    page_state.scroll_up();
                 }
             }
             KeyCode::Char('d')
-                if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
+                if key.modifiers == KeyModifiers::CONTROL && !page_state.search_active =>
             {
-                for _ in 0..state.num_elements / 2 {
-                    state.command_list.next();
+                for _ in 0..page_state.num_elements / 2 {
+                    page_state.command_list.next();
                 }
             }
             KeyCode::Char('u')
-                if key.modifiers == KeyModifiers::CONTROL && !state.search_active =>
+                if key.modifiers == KeyModifiers::CONTROL && !page_state.search_active =>
             {
-                for _ in 0..state.num_elements / 2 {
-                    state.command_list.previous();
+                for _ in 0..page_state.num_elements / 2 {
+                    page_state.command_list.previous();
                 }
             }
-            KeyCode::Char('1') if !state.search_active => {
-                select_section!(state, ctx, 0);
+            KeyCode::Char('1') if !page_state.search_active => {
+                select_section!(page_state, state, 0);
             }
-            KeyCode::Char('2') if !state.search_active => {
-                select_section!(state, ctx, 1);
+            KeyCode::Char('2') if !page_state.search_active => {
+                select_section!(page_state, state, 1);
             }
-            KeyCode::Char('3') if !state.search_active => {
-                select_section!(state, ctx, 2);
+            KeyCode::Char('3') if !page_state.search_active => {
+                select_section!(page_state, state, 2);
             }
-            KeyCode::Char('4') if !state.search_active => {
-                select_section!(state, ctx, 3);
+            KeyCode::Char('4') if !page_state.search_active => {
+                select_section!(page_state, state, 3);
             }
-            KeyCode::Char('5') if !state.search_active => {
-                select_section!(state, ctx, 4);
+            KeyCode::Char('5') if !page_state.search_active => {
+                select_section!(page_state, state, 4);
             }
-            KeyCode::Char('6') if !state.search_active => {
-                select_section!(state, ctx, 5);
+            KeyCode::Char('6') if !page_state.search_active => {
+                select_section!(page_state, state, 5);
             }
-            KeyCode::Char('7') if !state.search_active => {
-                select_section!(state, ctx, 6);
+            KeyCode::Char('7') if !page_state.search_active => {
+                select_section!(page_state, state, 6);
             }
-            KeyCode::Char('8') if !state.search_active => {
-                select_section!(state, ctx, 7);
+            KeyCode::Char('8') if !page_state.search_active => {
+                select_section!(page_state, state, 7);
             }
-            KeyCode::Char('9') if !state.search_active => {
-                select_section!(state, ctx, 8);
+            KeyCode::Char('9') if !page_state.search_active => {
+                select_section!(page_state, state, 8);
             }
-            KeyCode::Enter if !state.search_active => {
-                if state.section_active {
-                    state.section_active = false;
+            KeyCode::Enter if !page_state.search_active => {
+                if page_state.section_active {
+                    page_state.section_active = false;
                     return;
                 }
 
-                if let Some(command) = state.selected_commands() {
-                    ctx.search = state.search.clone();
-                    ctx.selected_command = state.command_list.selected;
+                if let Some(command) = page_state.selected_commands() {
+                    state.search = page_state.search.clone();
+                    state.selected_command = page_state.command_list.selected;
 
-                    let width = state.page_width;
+                    let width = page_state.page_width;
 
                     let page_state = ManPageState::new(&command, width);
-                    ctx.active_state = ActiveState::Man(page_state);
+                    state.active_state = ActiveState::Man(page_state);
 
-                    let page = EventStatefulWidget::new(ManPage::new(ctrl), ctrl);
-                    ctx.active_page = ActivePage::Man(page);
+                    let page = ManPage::new(ctx.controller);
+                    let page = IStatefulWidget::new(page, ctx.controller);
+                    state.active_page = ActivePage::Man(page);
                 }
             }
-            KeyCode::Char('/') if !state.search_active => {
-                state.search_active = true;
-                state.command_list.selected = None;
+            KeyCode::Char('/') if !page_state.search_active => {
+                page_state.search_active = true;
+                page_state.command_list.selected = None;
             }
-            KeyCode::Esc | KeyCode::Enter if state.search_active => {
-                state.search_active = false;
+            KeyCode::Esc | KeyCode::Enter if page_state.search_active => {
+                page_state.search_active = false;
             }
-            KeyCode::Esc if !state.search_active => {
-                state.search = String::new();
-                state.command_list.selected = None;
+            KeyCode::Esc if !page_state.search_active => {
+                page_state.search = String::new();
+                page_state.command_list.selected = None;
             }
-            KeyCode::Backspace if state.search_active => {
-                state.search.pop();
+            KeyCode::Backspace if page_state.search_active => {
+                page_state.search.pop();
             }
-            KeyCode::Char(ch) if state.search_active => {
-                state.command_list.selected = None;
-                state.search.push(ch);
+            KeyCode::Char(ch) if page_state.search_active => {
+                page_state.command_list.selected = None;
+                page_state.search.push(ch);
             }
             _ => {}
         }
@@ -273,32 +274,31 @@ impl StatefulWidgetRef for ListPage {
     }
 }
 
-struct CommandList {}
+struct CommandList;
 
 impl EventfulWidget<AppState, Event> for CommandList {
-    fn key() -> String {
-        String::from("CommandList")
+    fn unique_key() -> String {
+        String::from("ListPageCommands")
     }
 
-    fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
-        let ActiveState::List(state) = &mut ctx.active_state else {
+    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::List(page_state) = &mut state.active_state else {
             return;
         };
 
-        if let Event::Mouse(e) = event {
+        if let Event::Mouse(e) = ctx.event {
             let position = Position::new(e.column, e.row);
             let Some(area) = area else {
                 return;
             };
-
             if !area.contains(position) {
                 return;
             }
 
             match e.kind {
-                MouseEventKind::ScrollUp => state.scroll_up(),
-                MouseEventKind::ScrollDown => state.scroll_down(),
-                MouseEventKind::Down(_) => state.search_active = false,
+                MouseEventKind::ScrollUp => page_state.scroll_up(),
+                MouseEventKind::ScrollDown => page_state.scroll_down(),
+                MouseEventKind::Down(_) => page_state.search_active = false,
                 _ => {}
             }
         }
@@ -411,19 +411,19 @@ impl StatefulWidget for SectionList<'_> {
     }
 }
 
-struct Search {}
+struct Search;
 
 impl EventfulWidget<AppState, Event> for Search {
-    fn key() -> String {
-        String::from("ListSearch")
+    fn unique_key() -> String {
+        String::from("ListPageSearch")
     }
 
-    fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
-        let ActiveState::List(state) = &mut ctx.active_state else {
+    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::List(page_state) = &mut state.active_state else {
             return;
         };
 
-        if let Event::Mouse(e) = event {
+        if let Event::Mouse(e) = ctx.event {
             let position = Position::new(e.column, e.row);
             let Some(area) = area else {
                 return;
@@ -433,9 +433,8 @@ impl EventfulWidget<AppState, Event> for Search {
                 return;
             }
 
-            match e.kind {
-                MouseEventKind::Down(_) => state.search_active = true,
-                _ => {}
+            if let MouseEventKind::Down(_) = e.kind {
+                page_state.search_active = true;
             }
         }
     }

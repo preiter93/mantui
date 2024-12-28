@@ -62,9 +62,9 @@ pub(crate) fn emit_events(ctrl: &EventCtrl, tick_rate_ms: u64) {
                         let _ = sender.send(Event::Key(event));
                     }
                     CTEvent::Mouse(event) => {
-                        if let MouseEventKind::Down(_) = event.kind {
-                            let _ = sender.send(Event::Mouse(event));
-                        }
+                        // if let MouseEventKind::Down(_) = event.kind {
+                        // }
+                        let _ = sender.send(Event::Mouse(event));
                     }
                     _ => {}
                 }
@@ -207,13 +207,6 @@ impl<S, E> EventController<S, E> {
     pub fn remove_listener(&mut self, id: &str) {
         let _ = self.callbacks.remove(id);
     }
-
-    // /// Notify all listener.
-    // fn notify_listener(&self, state: &mut S, event: &E) {
-    //     for callback in self.callbacks.values() {
-    //         (callback)(state, event);
-    //     }
-    // }
 }
 
 /// Waits for events and notifies all listeners.

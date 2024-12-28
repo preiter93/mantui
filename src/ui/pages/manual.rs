@@ -13,7 +13,7 @@ use crate::{
 use ansi_to_tui::IntoText;
 use ratatui::{
     buffer::Buffer,
-    crossterm::event::{KeyCode, KeyModifiers},
+    crossterm::event::{KeyCode, KeyModifiers, MouseEventKind},
     prelude::*,
     widgets::{
         Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
@@ -56,10 +56,10 @@ impl EventfulWidget<AppState, Event> for ManPage {
                     state.select_next_search();
                 }
                 KeyCode::Char('j') => {
-                    state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
+                    state.scroll_up();
                 }
                 KeyCode::Char('k') => {
-                    state.scroll_pos = state.scroll_pos.saturating_sub(1);
+                    state.scroll_down();
                 }
                 KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
                     state.scroll_pos = min(
@@ -127,6 +127,13 @@ pub(crate) struct ManPageState {
 }
 
 impl ManPageState {
+    fn scroll_up(&mut self) {
+        self.scroll_pos = self.scroll_pos.saturating_sub(1);
+    }
+    fn scroll_down(&mut self) {
+        self.scroll_pos = min(self.scroll_pos + 1, self.max_scroll_pos);
+    }
+
     pub fn select_next_search(&mut self) {
         if self.matches.is_empty() {
             return;
@@ -310,14 +317,33 @@ impl EventfulWidget<AppState, Event> for Content {
     }
 
     fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
-        let ActiveState::Man(_) = &mut ctx.active_state else {
+        let ActiveState::Man(state) = &mut ctx.active_state else {
             return;
         };
 
         if let Event::Mouse(e) = event {
             let position = Position::new(e.column, e.row);
+            let Some(area) = area else {
+                return;
+            };
 
-            if area.filter(|area| area.contains(position)).is_some() {
+            match e.kind {
+                MouseEventKind::ScrollUp => state.scroll_up(),
+                MouseEventKind::ScrollDown => state.scroll_down(),
+                _ => {}
+            }
+
+            // if position.y >= area.bottom() {
+            //     state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
+            // }
+            // if position.y < area.y {
+            //     state.scroll_pos = state.scroll_pos.saturating_sub(1);
+            // }
+            //
+            // if let
+            // log_to_file(format!("{:} {}", position.y, area.bottom()));
+
+            if area.contains(position) {
                 // log_to_file(format!("MOUSE EVENT {area:?}"));
             } else {
                 // log_to_file(format!("MOUSE EVENT MISSED"));

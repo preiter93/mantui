@@ -28,15 +28,17 @@ macro_rules! select_section {
 }
 
 pub(crate) struct ListPage {
-    commands: IStatefulWidget<CommandList>,
+    commands: IStatefulWidget<Commands>,
     search: IStatefulWidget<Search>,
+    section: IStatefulWidget<Section>,
 }
 
 impl ListPage {
     pub(crate) fn new(controller: &EventController) -> Self {
         Self {
-            commands: IStatefulWidget::new(CommandList, controller),
+            commands: IStatefulWidget::new(Commands, controller),
             search: IStatefulWidget::new(Search, controller),
+            section: IStatefulWidget::new(Section, controller),
         }
     }
 }
@@ -232,6 +234,7 @@ impl StatefulWidgetRef for ListPage {
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .areas(area);
+
         let [commands, sections] = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Min(0), Constraint::Length(27)])
@@ -247,36 +250,29 @@ impl StatefulWidgetRef for ListPage {
             theme.block.active
         };
         let command_block = block.clone().style(command_block_style);
-        let inner = command_block.inner(commands);
+        let area_commands = command_block.inner(commands);
         command_block.render(commands, buf);
-
-        self.commands.render_ref(inner, buf, state);
 
         let section_block_style = if state.section_active {
             theme.block.active
         } else {
             theme.block.inactive
         };
+        let section_block = block.style(section_block_style);
+        let area_sections = section_block.inner(sections);
+        section_block.render(sections, buf);
 
-        let section_list = SectionList {
-            block: Some(block.style(section_block_style)),
-        };
-        section_list.render(
-            sections.inner(Margin {
-                horizontal: 0,
-                vertical: 0,
-            }),
-            buf,
-            state,
-        );
+        self.commands.render_ref(area_commands, buf, state);
+
+        self.section.render_ref(area_sections, buf, state);
 
         self.search.render_ref(search, buf, state);
     }
 }
 
-struct CommandList;
+struct Commands;
 
-impl EventfulWidget<AppState, Event> for CommandList {
+impl EventfulWidget<AppState, Event> for Commands {
     fn unique_key() -> String {
         String::from("ListPageCommands")
     }
@@ -287,10 +283,11 @@ impl EventfulWidget<AppState, Event> for CommandList {
         };
 
         if let Event::Mouse(e) = ctx.event {
-            let position = Position::new(e.column, e.row);
             let Some(area) = area else {
                 return;
             };
+
+            let position = Position::new(e.column, e.row);
             if !area.contains(position) {
                 return;
             }
@@ -298,14 +295,24 @@ impl EventfulWidget<AppState, Event> for CommandList {
             match e.kind {
                 MouseEventKind::ScrollUp => page_state.scroll_up(),
                 MouseEventKind::ScrollDown => page_state.scroll_down(),
-                MouseEventKind::Down(_) => page_state.search_active = false,
+                MouseEventKind::Down(_) => {
+                    page_state.search_active = false;
+
+                    let diff = position.y as usize - area.y as usize;
+                    let scroll_offset_index = page_state.command_list.scroll_offset_index();
+
+                    let select = scroll_offset_index + diff;
+                    if select < page_state.filtered_commands().map_or(0, |l| l.len()) {
+                        page_state.command_list.select(Some(select));
+                    }
+                }
                 _ => {}
             }
         }
     }
 }
 
-impl StatefulWidgetRef for CommandList {
+impl StatefulWidgetRef for Commands {
     type State = ListPageState;
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
@@ -356,28 +363,48 @@ impl StatefulWidgetRef for CommandList {
         });
 
         ListView::new(builder, commands.len())
-            .scroll_padding(2)
             .infinite_scrolling(false)
             .render(area, buf, &mut state.command_list);
     }
 }
 
-struct SectionList<'a> {
-    block: Option<Block<'a>>,
+struct Section;
+
+impl EventfulWidget<AppState, Event> for Section {
+    fn unique_key() -> String {
+        String::from("ListPageSection")
+    }
+
+    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::List(page_state) = &mut state.active_state else {
+            return;
+        };
+
+        if let Event::Mouse(e) = ctx.event {
+            let position = Position::new(e.column, e.row);
+            let Some(area) = area else {
+                return;
+            };
+
+            if !area.contains(position) {
+                return;
+            }
+
+            if let MouseEventKind::Down(_) = e.kind {
+                let diff = position.y as usize - area.y as usize;
+                if diff < 9 {
+                    select_section!(page_state, state, diff);
+                }
+            }
+        }
+    }
 }
 
-impl StatefulWidget for SectionList<'_> {
+impl StatefulWidgetRef for Section {
     type State = ListPageState;
 
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
-
-        let mut area = area;
-        if let Some(block) = self.block {
-            let inner = block.inner(area);
-            block.render(area, buf);
-            area = inner;
-        }
 
         let sections = [
             "(1) User commands",

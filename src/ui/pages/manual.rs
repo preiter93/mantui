@@ -25,12 +25,14 @@ use super::{ListPage, ListPageState};
 
 pub(crate) struct ManPage {
     content: IStatefulWidget<Content>,
+    search: IStatefulWidget<Search>,
 }
 
 impl ManPage {
     pub(crate) fn new(controller: &EventController) -> Self {
         Self {
             content: IStatefulWidget::new(Content, controller),
+            search: IStatefulWidget::new(Search, controller),
         }
     }
 }
@@ -260,8 +262,11 @@ impl StatefulWidgetRef for ManPage {
         let inner = block.inner(main);
         block.render(main, buf);
 
-        // // Render the paragraph.
+        // Render the content.
         self.content.render_ref(inner, buf, state);
+
+        // Render the search
+        self.search.render_ref(search, buf, state);
 
         // Render the scrollbar.
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -294,22 +299,22 @@ impl StatefulWidgetRef for ManPage {
             }
         }
 
-        // Render the search bar
-        let style = if state.search_active {
-            theme.search.active
-        } else {
-            theme.search.inactive
-        };
-
-        let mut spans = vec![
-            Span::styled(" Search (/): ", style),
-            Span::styled(state.search.clone(), style),
-        ];
-        if state.search_active {
-            spans.push(Span::styled(" ", style.reversed()));
-        }
-
-        Line::from(spans).render(search, buf);
+        // // Render the search bar
+        // let style = if state.search_active {
+        //     theme.search.active
+        // } else {
+        //     theme.search.inactive
+        // };
+        //
+        // let mut spans = vec![
+        //     Span::styled(" Search (/): ", style),
+        //     Span::styled(state.search.clone(), style),
+        // ];
+        // if state.search_active {
+        //     spans.push(Span::styled(" ", style.reversed()));
+        // }
+        //
+        // Line::from(spans).render(search, buf);
     }
 }
 
@@ -337,6 +342,7 @@ impl EventfulWidget<AppState, Event> for Content {
             match e.kind {
                 MouseEventKind::ScrollUp => page_state.scroll_up(),
                 MouseEventKind::ScrollDown => page_state.scroll_down(),
+                MouseEventKind::Down(_) => page_state.search_active = false,
                 _ => {}
             }
         }
@@ -375,6 +381,58 @@ impl StatefulWidgetRef for Content {
         Paragraph::new(lines)
             .scroll((state.scroll_pos as u16, 0))
             .render(area, buf);
+    }
+}
+
+struct Search;
+
+impl EventfulWidget<AppState, Event> for Search {
+    fn unique_key() -> String {
+        String::from("ManPageSearch")
+    }
+
+    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::Man(page_state) = &mut state.active_state else {
+            return;
+        };
+
+        if let Event::Mouse(e) = ctx.event {
+            let position = Position::new(e.column, e.row);
+            let Some(area) = area else {
+                return;
+            };
+
+            if !area.contains(position) {
+                return;
+            }
+
+            if let MouseEventKind::Down(_) = e.kind {
+                page_state.search_active = true;
+            }
+        }
+    }
+}
+
+impl StatefulWidgetRef for Search {
+    type State = ManPageState;
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let theme = get_theme();
+
+        let style = if state.search_active {
+            theme.search.active
+        } else {
+            theme.search.inactive
+        };
+
+        let mut spans = vec![
+            Span::styled(" Search (/): ", style),
+            Span::styled(state.search.clone(), style),
+        ];
+        if state.search_active {
+            spans.push(Span::styled(" ", style.reversed()));
+        }
+
+        Line::from(spans).render(area, buf);
     }
 }
 

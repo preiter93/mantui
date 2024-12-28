@@ -23,8 +23,17 @@ use ratatui::{
 
 use super::{ListPage, ListPageState};
 
-#[derive(Default)]
-pub(crate) struct ManPage {}
+pub(crate) struct ManPage {
+    paragraph: EventStatefulWidget<AppState, Event, Content>,
+}
+
+impl ManPage {
+    pub(crate) fn new(controller: &EventCtrlRc) -> Self {
+        Self {
+            paragraph: EventStatefulWidget::new(Content {}, controller),
+        }
+    }
+}
 
 impl EventfulWidget<AppState, Event> for ManPage {
     fn key() -> String {
@@ -36,73 +45,71 @@ impl EventfulWidget<AppState, Event> for ManPage {
             return;
         };
 
-        let Event::Key(event) = event else {
-            return;
-        };
-
-        match event.code {
-            KeyCode::Char(ch)
-                if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
-            {
-                state.selected_match = None;
-                state.search.push(ch);
-                state.matches = find_matches_positions(&state.text, &state.search);
-                state.select_next_search();
-            }
-            KeyCode::Char('j') => {
-                state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
-            }
-            KeyCode::Char('k') => {
-                state.scroll_pos = state.scroll_pos.saturating_sub(1);
-            }
-            KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
-                state.scroll_pos = min(
-                    state.scroll_pos + state.page_height / 2,
-                    state.max_scroll_pos,
-                );
-            }
-            KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
-                state.scroll_pos = state.scroll_pos.saturating_sub(state.page_height / 2);
-            }
-            KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
-                state.scroll_pos = state.max_scroll_pos;
-            }
-            KeyCode::Char('g') => {
-                state.scroll_pos = 0;
-            }
-
-            KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
-                state.select_previous_search();
-            }
-            KeyCode::Char('n') => {
-                state.select_next_search();
-            }
-            KeyCode::Char('/') => {
-                state.search_active = true;
-            }
-            KeyCode::Backspace if state.search_active => {
-                state.search.pop();
-            }
-            KeyCode::Esc => {
-                if state.search_active {
-                    state.search_active = false;
-                } else if state.search.is_empty() {
-                    let page_state = ListPageState::new(ctx);
-                    ctx.active_state = ActiveState::List(page_state);
-
-                    let page = EventStatefulWidget::new(ListPage {}, ctrl);
-                    ctx.active_page = ActivePage::List(page);
-                } else {
-                    state.search = String::new();
-                    state.matches = Vec::new();
+        if let Event::Key(event) = event {
+            match event.code {
+                KeyCode::Char(ch)
+                    if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
+                {
                     state.selected_match = None;
+                    state.search.push(ch);
+                    state.matches = find_matches_positions(&state.text, &state.search);
+                    state.select_next_search();
                 }
+                KeyCode::Char('j') => {
+                    state.scroll_pos = min(state.scroll_pos + 1, state.max_scroll_pos);
+                }
+                KeyCode::Char('k') => {
+                    state.scroll_pos = state.scroll_pos.saturating_sub(1);
+                }
+                KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
+                    state.scroll_pos = min(
+                        state.scroll_pos + state.page_height / 2,
+                        state.max_scroll_pos,
+                    );
+                }
+                KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
+                    state.scroll_pos = state.scroll_pos.saturating_sub(state.page_height / 2);
+                }
+                KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
+                    state.scroll_pos = state.max_scroll_pos;
+                }
+                KeyCode::Char('g') => {
+                    state.scroll_pos = 0;
+                }
+
+                KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
+                    state.select_previous_search();
+                }
+                KeyCode::Char('n') => {
+                    state.select_next_search();
+                }
+                KeyCode::Char('/') => {
+                    state.search_active = true;
+                }
+                KeyCode::Backspace if state.search_active => {
+                    state.search.pop();
+                }
+                KeyCode::Esc => {
+                    if state.search_active {
+                        state.search_active = false;
+                    } else if state.search.is_empty() {
+                        let page_state = ListPageState::new(ctx);
+                        ctx.active_state = ActiveState::List(page_state);
+
+                        let page = EventStatefulWidget::new(ListPage {}, ctrl);
+                        ctx.active_page = ActivePage::List(page);
+                    } else {
+                        state.search = String::new();
+                        state.matches = Vec::new();
+                        state.selected_match = None;
+                    }
+                }
+                KeyCode::Enter if state.search_active => {
+                    state.search_active = false;
+                }
+                _ => {}
             }
-            KeyCode::Enter if state.search_active => {
-                state.search_active = false;
-            }
-            _ => {}
-        }
+        };
     }
 }
 
@@ -242,39 +249,14 @@ impl StatefulWidgetRef for ManPage {
         let inner = block.inner(main);
         block.render(main, buf);
 
-        // Render the paragraph.
-        state.max_scroll_pos = state.text.height().saturating_sub(inner.height as usize);
-        state.page_height = main.height as usize;
+        // // Render the paragraph.
+        self.paragraph.render_ref(inner, buf, state);
 
-        let style = if state.search_active {
-            theme.block.inactive
-        } else {
-            theme.block.active
-        };
-
-        let mut lines: Vec<Line> = Vec::new();
-        for line in state.text.lines.clone() {
-            let mut new_line: Vec<Span> = Vec::new();
-            for span in line {
-                if state.search_active {
-                    new_line.push(span.style(style));
-                } else {
-                    new_line.push(span);
-                }
-            }
-            lines.push(Line::from(new_line));
-        }
-
-        Paragraph::new(lines)
-            .scroll((state.scroll_pos as u16, 0))
-            // .style(style)
-            .render(inner, buf);
-
+        // Render the scrollbar.
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("╮"))
             .end_symbol(Some("╯"));
 
-        // Render the scrollbar.
         state.scrollbar = state.scrollbar.content_length(state.max_scroll_pos);
         state.scrollbar = state.scrollbar.position(state.scroll_pos);
         scrollbar.render(
@@ -317,6 +299,65 @@ impl StatefulWidgetRef for ManPage {
         }
 
         Line::from(spans).render(search, buf);
+    }
+}
+
+pub(crate) struct Content {}
+
+impl EventfulWidget<AppState, Event> for Content {
+    fn key() -> String {
+        String::from("ManPageParagraph")
+    }
+
+    fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
+        let ActiveState::Man(_) = &mut ctx.active_state else {
+            return;
+        };
+
+        if let Event::Mouse(e) = event {
+            let position = Position::new(e.column, e.row);
+
+            if area.filter(|area| area.contains(position)).is_some() {
+                // log_to_file(format!("MOUSE EVENT {area:?}"));
+            } else {
+                // log_to_file(format!("MOUSE EVENT MISSED"));
+            }
+        }
+    }
+}
+
+impl StatefulWidgetRef for Content {
+    type State = ManPageState;
+
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let theme = get_theme();
+
+        // Render the paragraph.
+        state.max_scroll_pos = state.text.height().saturating_sub(area.height as usize);
+        state.page_height = area.height as usize;
+
+        let style = if state.search_active {
+            theme.block.inactive
+        } else {
+            theme.block.active
+        };
+
+        let mut lines: Vec<Line> = Vec::new();
+        for line in state.text.lines.clone() {
+            let mut new_line: Vec<Span> = Vec::new();
+            for span in line {
+                if state.search_active {
+                    new_line.push(span.style(style));
+                } else {
+                    new_line.push(span);
+                }
+            }
+            lines.push(Line::from(new_line));
+        }
+
+        Paragraph::new(lines)
+            .scroll((state.scroll_pos as u16, 0))
+            .render(area, buf);
     }
 }
 

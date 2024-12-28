@@ -117,7 +117,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                     let page_state = ManPageState::new(&command, width);
                     ctx.active_state = ActiveState::Man(page_state);
 
-                    let page = EventStatefulWidget::new(ManPage {}, ctrl);
+                    let page = EventStatefulWidget::new(ManPage::new(ctrl), ctrl);
                     ctx.active_page = ActivePage::Man(page);
                 }
             }

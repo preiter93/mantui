@@ -5,8 +5,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ratatui::crossterm::event::KeyEvent;
-use ratatui::crossterm::event::{self, Event as CTEvent};
+use ratatui::crossterm::event::{self, Event as CTEvent, MouseEventKind};
+use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 
 use super::app::AppState;
 
@@ -35,6 +35,9 @@ pub enum Event {
     /// Key event.
     Key(KeyEvent),
 
+    /// Mouse event.
+    Mouse(MouseEvent),
+
     /// Internal event.
     Internal(InternalEvent),
 }
@@ -54,9 +57,17 @@ pub(crate) fn emit_events(ctrl: &EventCtrl, tick_rate_ms: u64) {
             // Emit key events
             let timeout = tick_rate.saturating_sub(last_tick.elapsed());
             if event::poll(timeout).expect("unable to poll events") {
-                if let CTEvent::Key(e) = event::read().expect("unable to read event") {
-                    let _ = sender.send(Event::Key(e));
-                };
+                match event::read().expect("unable to read event") {
+                    CTEvent::Key(event) => {
+                        let _ = sender.send(Event::Key(event));
+                    }
+                    CTEvent::Mouse(event) => {
+                        if let MouseEventKind::Down(_) = event.kind {
+                            let _ = sender.send(Event::Mouse(event));
+                        }
+                    }
+                    _ => {}
+                }
             }
 
             if last_tick.elapsed() >= tick_rate {

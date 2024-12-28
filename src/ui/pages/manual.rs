@@ -96,7 +96,7 @@ impl EventfulWidget<AppState, Event> for ManPage {
                         let page_state = ListPageState::new(ctx);
                         ctx.active_state = ActiveState::List(page_state);
 
-                        let page = EventStatefulWidget::new(ListPage {}, ctrl);
+                        let page = EventStatefulWidget::new(ListPage::new(ctrl), ctrl);
                         ctx.active_page = ActivePage::List(page);
                     } else {
                         state.search = String::new();

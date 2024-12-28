@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ratatui::crossterm::event::{self, Event as CTEvent, MouseEventKind};
+use ratatui::crossterm::event::{self, Event as CTEvent};
 use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 
 use super::app::AppState;

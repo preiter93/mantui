@@ -36,7 +36,7 @@ impl EventfulWidget<AppState, Event> for HomePage {
                 let page_state = ListPageState::new(state);
                 state.active_state = ActiveState::List(page_state);
 
-                let page = EventStatefulWidget::new(ListPage {}, ctrl);
+                let page = EventStatefulWidget::new(ListPage::new(ctrl), ctrl);
                 state.active_page = ActivePage::List(page);
             }
         }

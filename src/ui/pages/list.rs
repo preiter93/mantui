@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use ratatui::crossterm::event::{KeyCode, KeyModifiers};
+use ratatui::crossterm::event::{KeyCode, KeyModifiers, MouseEventKind};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, StatefulWidgetRef, Widget};
 use tachyonfx::CenteredShrink;
@@ -27,8 +27,19 @@ macro_rules! select_section {
     };
 }
 
-#[derive(Default, Clone)]
-pub(crate) struct ListPage {}
+pub(crate) struct ListPage {
+    commands: EventStatefulWidget<AppState, Event, CommandList>,
+    search: EventStatefulWidget<AppState, Event, Search>,
+}
+
+impl ListPage {
+    pub(crate) fn new(controller: &EventCtrlRc) -> Self {
+        Self {
+            commands: EventStatefulWidget::new(CommandList {}, controller),
+            search: EventStatefulWidget::new(Search {}, controller),
+        }
+    }
+}
 
 impl EventfulWidget<AppState, Event> for ListPage {
     fn key() -> String {
@@ -50,7 +61,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                     let s = min(state.section_list.selected.unwrap() + 1, 8);
                     select_section!(state, ctx, s);
                 } else {
-                    state.command_list.next();
+                    state.scroll_down();
                 }
             }
             KeyCode::Char('k') if !state.search_active => {
@@ -58,7 +69,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                     let s = state.section_list.selected.unwrap().saturating_sub(1);
                     select_section!(state, ctx, s);
                 } else {
-                    state.command_list.previous();
+                    state.scroll_up();
                 }
             }
             KeyCode::Char('d')
@@ -136,6 +147,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                 state.search.pop();
             }
             KeyCode::Char(ch) if state.search_active => {
+                state.command_list.selected = None;
                 state.search.push(ch);
             }
             _ => {}
@@ -198,6 +210,14 @@ impl ListPageState {
 
         self.command_list.selected.map(|i| commands[i].clone())
     }
+
+    fn scroll_down(&mut self) {
+        self.command_list.next();
+    }
+
+    fn scroll_up(&mut self) {
+        self.command_list.previous();
+    }
 }
 
 impl StatefulWidgetRef for ListPage {
@@ -225,10 +245,11 @@ impl StatefulWidgetRef for ListPage {
         } else {
             theme.block.active
         };
-        let command_list = CommandList {
-            block: block.clone().style(command_block_style),
-        };
-        command_list.render(commands, buf, state);
+        let command_block = block.clone().style(command_block_style);
+        let inner = command_block.inner(commands);
+        command_block.render(commands, buf);
+
+        self.commands.render_ref(inner, buf, state);
 
         let section_block_style = if state.section_active {
             theme.block.active
@@ -248,39 +269,47 @@ impl StatefulWidgetRef for ListPage {
             state,
         );
 
-        let style = if state.search_active {
-            theme.search.active
-        } else {
-            theme.search.inactive
-        };
-
-        let mut spans = vec![
-            Span::styled(" Search (/): ", style),
-            Span::styled(state.search.clone(), style),
-        ];
-        if state.search_active {
-            spans.push(Span::styled(" ", style.reversed()));
-        }
-
-        Line::from(spans).render(search, buf);
+        self.search.render_ref(search, buf, state);
     }
 }
 
-struct CommandList<'a> {
-    block: Block<'a>,
+struct CommandList {}
+
+impl EventfulWidget<AppState, Event> for CommandList {
+    fn key() -> String {
+        String::from("CommandList")
+    }
+
+    fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
+        let ActiveState::List(state) = &mut ctx.active_state else {
+            return;
+        };
+
+        if let Event::Mouse(e) = event {
+            let position = Position::new(e.column, e.row);
+            let Some(area) = area else {
+                return;
+            };
+
+            if !area.contains(position) {
+                return;
+            }
+
+            match e.kind {
+                MouseEventKind::ScrollUp => state.scroll_up(),
+                MouseEventKind::ScrollDown => state.scroll_down(),
+                MouseEventKind::Down(_) => state.search_active = false,
+                _ => {}
+            }
+        }
+    }
 }
 
-impl StatefulWidget for CommandList<'_> {
+impl StatefulWidgetRef for CommandList {
     type State = ListPageState;
 
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
-
-        let area = {
-            let inner = self.block.inner(area);
-            self.block.render(area, buf);
-            inner
-        };
 
         state.num_elements = area.height;
 
@@ -379,5 +408,58 @@ impl StatefulWidget for SectionList<'_> {
         ListView::new(builder, sections.len())
             .infinite_scrolling(false)
             .render(area, buf, &mut state.section_list);
+    }
+}
+
+struct Search {}
+
+impl EventfulWidget<AppState, Event> for Search {
+    fn key() -> String {
+        String::from("ListSearch")
+    }
+
+    fn handle_events(_: &EventCtrlRc, ctx: &mut AppState, event: &Event, area: Option<Rect>) {
+        let ActiveState::List(state) = &mut ctx.active_state else {
+            return;
+        };
+
+        if let Event::Mouse(e) = event {
+            let position = Position::new(e.column, e.row);
+            let Some(area) = area else {
+                return;
+            };
+
+            if !area.contains(position) {
+                return;
+            }
+
+            match e.kind {
+                MouseEventKind::Down(_) => state.search_active = true,
+                _ => {}
+            }
+        }
+    }
+}
+
+impl StatefulWidgetRef for Search {
+    type State = ListPageState;
+    fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let theme = get_theme();
+
+        let style = if state.search_active {
+            theme.search.active
+        } else {
+            theme.search.inactive
+        };
+
+        let mut spans = vec![
+            Span::styled(" Search (/): ", style),
+            Span::styled(state.search.clone(), style),
+        ];
+        if state.search_active {
+            spans.push(Span::styled(" ", style.reversed()));
+        }
+
+        Line::from(spans).render(area, buf);
     }
 }

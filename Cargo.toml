@@ -1,7 +1,11 @@
 [package]
 name = "mantui"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["preiter <phil.reiter93@gmail.com>"]
+repository = "https://github.com/preiter93/mantui"
+keywords = ["man", "pages", "ratatui", "tui"]
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.95"

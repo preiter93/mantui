@@ -1,33 +1,23 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss, clippy::cast_precision_loss)]
-use std::cmp::min;
-
-use crate::{
-    core::get_manual,
-    ui::{
-        app::{ActivePage, ActiveState, AppState},
-        events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget},
-        theme::get_theme,
-    },
-};
+use crate::core::get_manual;
+use crate::ui::app::{ActiveState, AppState, Navigation};
+use crate::ui::events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget};
+use crate::ui::theme::get_theme;
 use ansi_to_tui::IntoText;
 use arboard::Clipboard;
-use ratatui::{
-    buffer::Buffer,
-    crossterm::event::{KeyCode, KeyModifiers, MouseEventKind},
-    prelude::*,
-    widgets::{
-        Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
-        StatefulWidgetRef,
-    },
+use ratatui::buffer::Buffer;
+use ratatui::crossterm::event::{KeyCode, KeyModifiers, MouseEventKind};
+use ratatui::prelude::*;
+use ratatui::widgets::{
+    Block, Borders, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+    StatefulWidgetRef,
 };
+use std::cmp::min;
 
-use super::{
-    ListPage, ListPageState,
-    utils::{
-        PositionAbsolut, PositionScreen, Selection, extract_text_from_lines, find_matches,
-        text_to_lines,
-    },
+use super::utils::{
+    PositionAbsolut, PositionScreen, Selection, extract_text_from_lines, find_matches,
+    text_to_lines,
 };
 
 pub(crate) struct ManPage {
@@ -191,77 +181,70 @@ impl EventfulWidget<AppState, Event> for ManPage {
         String::from("ManPage")
     }
 
-    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
-        let ActiveState::Man(page_state) = &mut state.active_state else {
+    fn on_event(ctx: EventContext, app_state: &mut AppState, _area: Option<Rect>) {
+        let ActiveState::Man(state) = &mut app_state.active_state else {
             return;
         };
 
         if let Event::Key(event) = ctx.event {
             match event.code {
                 KeyCode::Char(ch)
-                    if page_state.search_active && event.modifiers != KeyModifiers::CONTROL =>
+                    if state.search_active && event.modifiers != KeyModifiers::CONTROL =>
                 {
-                    page_state.selected_match = None;
-                    page_state.search.push(ch);
-                    page_state.matches = find_matches(&page_state.text, &page_state.search);
-                    page_state.select_next_search();
+                    state.selected_match = None;
+                    state.search.push(ch);
+                    state.matches = find_matches(&state.text, &state.search);
+                    state.select_next_search();
                 }
                 KeyCode::Char('j') => {
-                    page_state.scroll_down();
+                    state.scroll_down();
                 }
                 KeyCode::Char('k') => {
-                    page_state.scroll_up();
+                    state.scroll_up();
                 }
                 KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
-                    page_state.scroll_offset = min(
-                        page_state.scroll_offset + page_state.page_height / 2,
-                        page_state.max_scroll_pos,
+                    state.scroll_offset = min(
+                        state.scroll_offset + state.page_height / 2,
+                        state.max_scroll_pos,
                     );
                 }
                 KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
-                    page_state.scroll_offset = page_state
-                        .scroll_offset
-                        .saturating_sub(page_state.page_height / 2);
+                    state.scroll_offset = state.scroll_offset.saturating_sub(state.page_height / 2);
                 }
                 KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
-                    page_state.scroll_offset = page_state.max_scroll_pos;
+                    state.scroll_offset = state.max_scroll_pos;
                 }
                 KeyCode::Char('g') => {
-                    page_state.scroll_offset = 0;
+                    state.scroll_offset = 0;
                 }
 
                 KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
-                    page_state.select_previous_search();
+                    state.select_previous_search();
                 }
                 KeyCode::Char('n') => {
-                    page_state.select_next_search();
+                    state.select_next_search();
                 }
                 KeyCode::Char('/') => {
-                    page_state.search_active = true;
+                    state.search_active = true;
                 }
-                KeyCode::Backspace if page_state.search_active => {
-                    page_state.search.pop();
+                KeyCode::Backspace if state.search_active => {
+                    state.search.pop();
                 }
                 KeyCode::Esc => {
-                    if page_state.search_active {
-                        page_state.search_active = false;
-                    } else if page_state.selection.is_some() {
-                        page_state.selection = None;
-                    } else if page_state.search.is_empty() {
-                        let page_state = ListPageState::new(state);
-                        state.active_state = ActiveState::List(page_state);
-
-                        let page = ListPage::new(ctx.controller);
-                        let page = IStatefulWidget::new(page, ctx.controller);
-                        state.active_page = ActivePage::List(page);
+                    if state.search_active {
+                        state.search_active = false;
+                    } else if state.selection.is_some() {
+                        state.selection = None;
+                    } else if state.search.is_empty() {
+                        Navigation::List.activate(app_state, ctx.controller);
                     } else {
-                        page_state.search = String::new();
-                        page_state.matches = Vec::new();
-                        page_state.selected_match = None;
+                        state.search = String::new();
+                        state.matches = Vec::new();
+                        state.selected_match = None;
                     }
                 }
-                KeyCode::Enter if page_state.search_active => {
-                    page_state.search_active = false;
+                KeyCode::Enter if state.search_active => {
+                    state.search_active = false;
                 }
                 _ => {}
             }
@@ -325,8 +308,8 @@ impl EventfulWidget<AppState, Event> for Content {
         String::from("ManPageContent")
     }
 
-    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
-        let ActiveState::Man(page_state) = &mut state.active_state else {
+    fn on_event(ctx: EventContext, app_state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::Man(state) = &mut app_state.active_state else {
             return;
         };
 
@@ -335,38 +318,45 @@ impl EventfulWidget<AppState, Event> for Content {
             let Some(area) = area else {
                 return;
             };
-            if !area.contains(position) {
-                return;
-            }
 
-            let scroll_offset = page_state.scroll_offset as u16;
-            let click_position = PositionAbsolut::from_screen(
+            let scroll_offset = state.scroll_offset as u16;
+            let position_buffer = PositionAbsolut::from_screen(
                 PositionScreen::new(position.x, position.y),
                 scroll_offset,
-                page_state.padding_x,
-                page_state.padding_y,
+                state.padding_x,
+                state.padding_y,
             );
             match e.kind {
-                MouseEventKind::ScrollUp => page_state.scroll_up(),
-                MouseEventKind::ScrollDown => page_state.scroll_down(),
+                MouseEventKind::ScrollUp => {
+                    if area.contains(position) {
+                        state.scroll_up();
+                    }
+                }
+                MouseEventKind::ScrollDown => {
+                    if area.contains(position) {
+                        state.scroll_down();
+                    }
+                }
                 MouseEventKind::Down(_) => {
-                    page_state.search_active = false;
-                    page_state.selection_active = false;
-                    page_state.selection = Some(Selection::new(click_position, click_position));
+                    if area.contains(position) {
+                        state.search_active = false;
+
+                        state.selection = Some(Selection::new(position_buffer, position_buffer));
+                        state.selection_active = false;
+                    }
                 }
                 MouseEventKind::Drag(_) => {
-                    page_state.selection_active = true;
-                    if let Some(selection) = &page_state.selection {
-                        page_state.selection =
-                            Some(Selection::new(selection.start, click_position));
+                    state.selection_active = true;
+                    if let Some(selection) = &state.selection {
+                        state.selection = Some(Selection::new(selection.start, position_buffer));
                     }
                 }
                 MouseEventKind::Up(_) => {
-                    if page_state.selection_active {
-                        page_state.copy_selection();
+                    if state.selection_active {
+                        state.copy_selection();
                     }
-                    page_state.selection = None;
-                    page_state.selection_active = false;
+                    state.selection = None;
+                    state.selection_active = false;
                 }
                 _ => {}
             }
@@ -455,8 +445,8 @@ impl EventfulWidget<AppState, Event> for Search {
         String::from("ManPageSearch")
     }
 
-    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
-        let ActiveState::Man(page_state) = &mut state.active_state else {
+    fn on_event(ctx: EventContext, app_state: &mut AppState, area: Option<Rect>) {
+        let ActiveState::Man(state) = &mut app_state.active_state else {
             return;
         };
 
@@ -471,9 +461,9 @@ impl EventfulWidget<AppState, Event> for Search {
             }
 
             if let MouseEventKind::Down(_) = e.kind {
-                page_state.search_active = true;
-                page_state.selection = None;
-                page_state.selection_active = false;
+                state.search_active = true;
+                state.selection = None;
+                state.selection_active = false;
             }
         }
     }

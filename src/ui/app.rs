@@ -26,12 +26,46 @@ pub struct App<'a> {
     _phantom: PhantomData<&'a ()>,
 }
 
-pub enum ActivePage {
+pub(crate) enum Navigation {
+    List,
+    Man,
+}
+
+impl Navigation {
+    pub(crate) fn activate(&self, state: &mut AppState, controller: &EventController) {
+        match self {
+            Navigation::List => {
+                let page_state = ListPageState::new(state);
+                state.active_state = ActiveState::List(page_state);
+
+                let page = ListPage::new(controller);
+                let page = IStatefulWidget::new(page, controller);
+                state.active_page = ActiveWidget::List(page);
+            }
+            Navigation::Man => {
+                let ActiveState::List(page_state) = &mut state.active_state else {
+                    return;
+                };
+                if let Some(command) = page_state.selected_command() {
+                    let page_state = ManPageState::new(&command, page_state.page_width);
+                    state.active_state = ActiveState::Man(page_state);
+
+                    let page = ManPage::new(controller);
+                    let page = IStatefulWidget::new(page, controller);
+                    state.active_page = ActiveWidget::Man(page);
+                }
+            }
+        }
+    }
+}
+
+pub(crate) enum ActiveWidget {
     Home(IStatefulWidget<HomePage>),
     List(IStatefulWidget<ListPage>),
     Man(IStatefulWidget<ManPage>),
 }
-pub enum ActiveState {
+
+pub(crate) enum ActiveState {
     Home(HomePageState),
     List(ListPageState),
     Man(ManPageState),
@@ -39,7 +73,7 @@ pub enum ActiveState {
 
 pub struct AppState {
     pub(super) should_quit: bool,
-    pub(super) active_page: ActivePage,
+    pub(super) active_page: ActiveWidget,
     pub(super) active_state: ActiveState,
 
     pub(super) selected_command: Option<usize>,
@@ -59,7 +93,7 @@ impl AppState {
 
         Self {
             should_quit: false,
-            active_page: ActivePage::Home(IStatefulWidget::new(page, controller)),
+            active_page: ActiveWidget::Home(IStatefulWidget::new(page, controller)),
             active_state: ActiveState::Home(state),
             selected_command: None,
             selected_section: 0,
@@ -131,13 +165,13 @@ impl StatefulWidget for &mut App<'_> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         match (&state.active_page, &mut state.active_state) {
-            (ActivePage::Home(page), ActiveState::Home(state)) => {
+            (ActiveWidget::Home(page), ActiveState::Home(state)) => {
                 page.render_ref(area, buf, state);
             }
-            (ActivePage::List(page), ActiveState::List(state)) => {
+            (ActiveWidget::List(page), ActiveState::List(state)) => {
                 page.render_ref(area, buf, state);
             }
-            (ActivePage::Man(page), ActiveState::Man(state)) => {
+            (ActiveWidget::Man(page), ActiveState::Man(state)) => {
                 page.render_ref(area, buf, state);
             }
             _ => {}

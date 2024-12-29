@@ -38,7 +38,7 @@ pub(super) fn find_matches(text: &Text, query: &str) -> Vec<(u16, u16)> {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(super) struct PositionAbsolut(Position);
+pub(super) struct PositionAbsolut(pub(super) Position);
 
 impl PositionAbsolut {
     pub(super) fn new(x: u16, y: u16) -> Self {
@@ -134,7 +134,10 @@ impl Selection {
 
         start.y = max(start.y, min_y);
         start.y = min(start.y, max_y);
-        end.y = min(end.y, max_y);
+        if end.y > max_y {
+            end.y = max_y;
+            end.x = max_x;
+        }
 
         Some(SelectionIterator::new(start, end, min_x, max_x))
     }

@@ -1,6 +1,6 @@
 use super::{ListPage, ListPageState, utils::centered_rect};
 use crate::ui::{
-    app::{ActivePage, ActiveState, AppState},
+    app::{ActiveState, ActiveWidget, AppState},
     events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget},
     theme::get_theme,
 };
@@ -57,7 +57,7 @@ fn next_page(controller: &EventController, state: &mut AppState) {
 
     let page = ListPage::new(controller);
     let page = IStatefulWidget::new(page, controller);
-    state.active_page = ActivePage::List(page);
+    state.active_page = ActiveWidget::List(page);
 }
 
 impl StatefulWidgetRef for HomePage {

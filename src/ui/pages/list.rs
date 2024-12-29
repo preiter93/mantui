@@ -7,11 +7,9 @@ use tachyonfx::CenteredShrink;
 use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
-use crate::ui::app::{ActivePage, ActiveState, AppState, load_commands_in_background};
+use crate::ui::app::{ActiveState, AppState, Navigation, load_commands_in_background};
 use crate::ui::events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget};
 use crate::ui::theme::get_theme;
-
-use super::{ManPage, ManPageState};
 
 macro_rules! select_section {
     ($state:expr, $ctx:expr, $section:expr) => {
@@ -120,7 +118,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                     page_state.section_active = false;
                     return;
                 }
-                next_page(ctx.controller, state);
+                Navigation::Man.activate(state, ctx.controller);
             }
             KeyCode::Char('/') if !page_state.search_active => {
                 page_state.search_active = true;
@@ -145,26 +143,6 @@ impl EventfulWidget<AppState, Event> for ListPage {
     }
 }
 
-fn next_page(controller: &EventController, state: &mut AppState) {
-    let ActiveState::List(page_state) = &mut state.active_state else {
-        return;
-    };
-
-    if let Some(command) = page_state.selected_commands() {
-        state.search = page_state.search.clone();
-        state.selected_command = page_state.command_list.selected;
-
-        let width = page_state.page_width;
-
-        let page_state = ManPageState::new(&command, width);
-        state.active_state = ActiveState::Man(page_state);
-
-        let page = ManPage::new(controller);
-        let page = IStatefulWidget::new(page, controller);
-        state.active_page = ActivePage::Man(page);
-    }
-}
-
 #[derive(Default)]
 pub(crate) struct ListPageState {
     pub(crate) commands: Option<Vec<String>>,
@@ -173,7 +151,7 @@ pub(crate) struct ListPageState {
     num_elements: u16,
     search_active: bool,
     search: String,
-    page_width: usize,
+    pub(crate) page_width: usize,
     throbber: ThrobberState,
     section_active: bool,
 }
@@ -213,7 +191,7 @@ impl ListPageState {
         Some(filtered)
     }
 
-    fn selected_commands(&self) -> Option<String> {
+    pub(crate) fn selected_command(&self) -> Option<String> {
         let Some(commands) = &self.filtered_commands() else {
             return None;
         };
@@ -311,7 +289,7 @@ impl EventfulWidget<AppState, Event> for Commands {
                     let mouse_select = scroll_offset_index + diff;
                     if mouse_select < page_state.filtered_commands().map_or(0, |l| l.len()) {
                         if page_state.command_list.selected == Some(mouse_select) {
-                            next_page(ctx.controller, state);
+                            Navigation::Man.activate(state, ctx.controller);
                         } else {
                             page_state.command_list.select(Some(mouse_select));
                         }

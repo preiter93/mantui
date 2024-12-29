@@ -27,7 +27,7 @@ jobs:
           components: clippy
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --workspace -- -D warnings
+      - run: cargo clippy -- -D warnings
 
   check:
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
-      - run: cargo check --all --verbose --workspace
+      - run: cargo check --all --verbose
 
   test:
     runs-on: ubuntu-latest
@@ -49,4 +49,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
-      - run: cargo test --all --verbose --workspace
+      - run: cargo test --all --verbose

@@ -15,3 +15,13 @@ Browse through sections and man pages. Filter with `/`.
 Read the man pages. Supports mouse scroll and selection.
 
 ![](assets/man-tar.png)
+
+## Key bindings
+
+| Action                         | Command                |
+| ------------------------------ | ---------------------- |
+| Scroll up/down                 | `j` / `k`              |
+| Scroll half-page up/down       | `Ctrl + u` / `Ctrl + d`|
+| Search                         | `/`                    |
+| Go back                        | `Esc`                  |
+| Select                         | `Enter`                |

@@ -1,6 +1,6 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss, clippy::cast_precision_loss)]
-use std::cmp::{max, min};
+use std::cmp::min;
 
 use crate::{
     core::get_manual,
@@ -11,6 +11,7 @@ use crate::{
     },
 };
 use ansi_to_tui::IntoText;
+use arboard::Clipboard;
 use ratatui::{
     buffer::Buffer,
     crossterm::event::{KeyCode, KeyModifiers, MouseEventKind},
@@ -21,7 +22,13 @@ use ratatui::{
     },
 };
 
-use super::{ListPage, ListPageState};
+use super::{
+    ListPage, ListPageState,
+    utils::{
+        PositionAbsolut, PositionScreen, Selection, extract_text_from_lines, find_matches,
+        text_to_lines,
+    },
+};
 
 pub(crate) struct ManPage {
     content: IStatefulWidget<Content>,
@@ -40,16 +47,20 @@ impl ManPage {
 #[derive(Default)]
 pub(crate) struct ManPageState {
     text: Text<'static>,
-    scroll_pos: usize,
+    scroll_offset: usize,
     page_height: usize,
+    num_lines: usize,
     max_scroll_pos: usize,
     scrollbar: ScrollbarState,
     search_active: bool,
     search: String,
     selected_match: Option<usize>,
     matches: Vec<(u16, u16)>,
-    selection: Option<MouseSelection>,
+    selection: Option<Selection>,
     selection_active: bool,
+    clipboard: Option<Clipboard>,
+    padding_x: u16,
+    padding_y: u16,
 }
 
 impl ManPageState {
@@ -61,13 +72,17 @@ impl ManPageState {
 
         let text =
             IntoText::into_text(&text_raw).unwrap_or(Text::from("Could not convert ansi to tui."));
+        let num_lines = text.lines.len();
 
         let scrollbar = ScrollbarState::new(0).position(0);
 
+        let clipboard = Clipboard::new().ok();
+
         Self {
-            scroll_pos: 0,
+            scroll_offset: 0,
             page_height: 0,
             max_scroll_pos: 0,
+            num_lines,
             text,
             scrollbar,
             search: String::new(),
@@ -76,13 +91,16 @@ impl ManPageState {
             search_active: false,
             selection: None,
             selection_active: false,
+            clipboard,
+            padding_x: 2,
+            padding_y: 1,
         }
     }
     fn scroll_up(&mut self) {
-        self.scroll_pos = self.scroll_pos.saturating_sub(1);
+        self.scroll_offset = self.scroll_offset.saturating_sub(1);
     }
     fn scroll_down(&mut self) {
-        self.scroll_pos = min(self.scroll_pos + 1, self.max_scroll_pos);
+        self.scroll_offset = min(self.scroll_offset + 1, self.max_scroll_pos);
     }
 
     pub fn select_next_search(&mut self) {
@@ -101,17 +119,18 @@ impl ManPageState {
             let selected_row = selected_row as usize;
 
             // Check if the selected match is after the visible range
-            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3) - padding;
+            let last_visible_row =
+                self.scroll_offset + self.page_height.saturating_sub(3) - padding;
             let diff = selected_row.saturating_sub(last_visible_row);
             if diff > 0 {
-                self.scroll_pos += diff;
-                self.scroll_pos = self.scroll_pos.min(self.max_scroll_pos);
+                self.scroll_offset += diff;
+                self.scroll_offset = self.scroll_offset.min(self.max_scroll_pos);
             }
 
             // Check if the selected match is above the visible range
-            let first_visible_row = self.scroll_pos + padding;
+            let first_visible_row = self.scroll_offset + padding;
             if selected_row < first_visible_row {
-                self.scroll_pos = selected_row.saturating_sub(padding);
+                self.scroll_offset = selected_row.saturating_sub(padding);
             }
         }
     }
@@ -132,17 +151,18 @@ impl ManPageState {
             let selected_row = selected_row as usize;
 
             // Check if the selected match is after the visible range
-            let last_visible_row = self.scroll_pos + self.page_height.saturating_sub(3) - padding;
+            let last_visible_row =
+                self.scroll_offset + self.page_height.saturating_sub(3) - padding;
             let diff = selected_row.saturating_sub(last_visible_row);
             if diff > 0 {
-                self.scroll_pos += diff;
-                self.scroll_pos = self.scroll_pos.min(self.max_scroll_pos);
+                self.scroll_offset += diff;
+                self.scroll_offset = self.scroll_offset.min(self.max_scroll_pos);
             }
 
             // Check if the selected match is above the visible range
-            let first_visible_row = self.scroll_pos + padding;
+            let first_visible_row = self.scroll_offset + padding;
             if selected_row < first_visible_row {
-                self.scroll_pos = selected_row.saturating_sub(padding);
+                self.scroll_offset = selected_row.saturating_sub(padding);
             }
         }
     }
@@ -154,6 +174,16 @@ impl ManPageState {
 
         None
     }
+
+    fn copy_selection(&mut self) {
+        if let Some(clipboard) = &mut self.clipboard {
+            if let Some(selection) = &self.selection.take() {
+                let lines = text_to_lines(&self.text);
+                let copied_text = extract_text_from_lines(&lines, selection);
+                let _ = clipboard.set_text(copied_text);
+            }
+        }
+    }
 }
 
 impl EventfulWidget<AppState, Event> for ManPage {
@@ -161,7 +191,7 @@ impl EventfulWidget<AppState, Event> for ManPage {
         String::from("ManPage")
     }
 
-    fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
+    fn on_event(ctx: EventContext, state: &mut AppState, area: Option<Rect>) {
         let ActiveState::Man(page_state) = &mut state.active_state else {
             return;
         };
@@ -173,8 +203,7 @@ impl EventfulWidget<AppState, Event> for ManPage {
                 {
                     page_state.selected_match = None;
                     page_state.search.push(ch);
-                    page_state.matches =
-                        find_matches_positions(&page_state.text, &page_state.search);
+                    page_state.matches = find_matches(&page_state.text, &page_state.search);
                     page_state.select_next_search();
                 }
                 KeyCode::Char('j') => {
@@ -184,21 +213,21 @@ impl EventfulWidget<AppState, Event> for ManPage {
                     page_state.scroll_up();
                 }
                 KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {
-                    page_state.scroll_pos = min(
-                        page_state.scroll_pos + page_state.page_height / 2,
+                    page_state.scroll_offset = min(
+                        page_state.scroll_offset + page_state.page_height / 2,
                         page_state.max_scroll_pos,
                     );
                 }
                 KeyCode::Char('u') if event.modifiers == KeyModifiers::CONTROL => {
-                    page_state.scroll_pos = page_state
-                        .scroll_pos
+                    page_state.scroll_offset = page_state
+                        .scroll_offset
                         .saturating_sub(page_state.page_height / 2);
                 }
                 KeyCode::Char('G') if event.modifiers == KeyModifiers::SHIFT => {
-                    page_state.scroll_pos = page_state.max_scroll_pos;
+                    page_state.scroll_offset = page_state.max_scroll_pos;
                 }
                 KeyCode::Char('g') => {
-                    page_state.scroll_pos = 0;
+                    page_state.scroll_offset = 0;
                 }
 
                 KeyCode::Char('N') if event.modifiers == KeyModifiers::SHIFT => {
@@ -261,7 +290,7 @@ impl StatefulWidgetRef for ManPage {
             .style(style)
             .borders(Borders::ALL)
             .border_type(ratatui::widgets::BorderType::Rounded)
-            .padding(Padding::horizontal(1));
+            .padding(Padding::horizontal(state.padding_x.saturating_sub(1)));
         let inner = block.inner(main);
         block.render(main, buf);
 
@@ -277,7 +306,7 @@ impl StatefulWidgetRef for ManPage {
             .end_symbol(Some("╯"));
 
         state.scrollbar = state.scrollbar.content_length(state.max_scroll_pos);
-        state.scrollbar = state.scrollbar.position(state.scroll_pos);
+        state.scrollbar = state.scrollbar.position(state.scroll_offset);
         scrollbar.render(
             main.inner(Margin {
                 horizontal: 0,
@@ -307,36 +336,37 @@ impl EventfulWidget<AppState, Event> for Content {
                 return;
             };
             if !area.contains(position) {
-                // if let MouseEventKind::Drag(_) = e.kind {
-                // if position.y >= area.bottom() {
-                //     page_state.scroll_down();
-                // } else {
-                //     page_state.scroll_up();
-                // }
-                // }
                 return;
             }
 
-            let scroll_pos = page_state.scroll_pos as u16;
+            let scroll_offset = page_state.scroll_offset as u16;
+            let click_position = PositionAbsolut::from_screen(
+                PositionScreen::new(position.x, position.y),
+                scroll_offset,
+                page_state.padding_x,
+                page_state.padding_y,
+            );
             match e.kind {
                 MouseEventKind::ScrollUp => page_state.scroll_up(),
                 MouseEventKind::ScrollDown => page_state.scroll_down(),
                 MouseEventKind::Down(_) => {
                     page_state.search_active = false;
                     page_state.selection_active = false;
-                    page_state.selection = Some(MouseSelection::new(
-                        offset_position(position, scroll_pos),
-                        offset_position(position, scroll_pos),
-                    ));
+                    page_state.selection = Some(Selection::new(click_position, click_position));
                 }
                 MouseEventKind::Drag(_) => {
                     page_state.selection_active = true;
                     if let Some(selection) = &page_state.selection {
-                        page_state.selection = Some(MouseSelection::new(
-                            selection.start,
-                            offset_position(position, scroll_pos),
-                        ));
+                        page_state.selection =
+                            Some(Selection::new(selection.start, click_position));
                     }
+                }
+                MouseEventKind::Up(_) => {
+                    if page_state.selection_active {
+                        page_state.copy_selection();
+                    }
+                    page_state.selection = None;
+                    page_state.selection_active = false;
                 }
                 _ => {}
             }
@@ -374,20 +404,18 @@ impl StatefulWidgetRef for Content {
         }
 
         Paragraph::new(lines)
-            .scroll((state.scroll_pos as u16, 0))
+            .scroll((state.scroll_offset as u16, 0))
             .render(area, buf);
 
         // Highlight the search matches.
-        let padding_x = 2;
-        let padding_y = 1;
         let style = if state.search_active {
             theme.highlight.inactive
         } else {
             theme.highlight.active
         };
         if let Some(selected_match) = state.selected_match() {
-            let x = selected_match.1 + padding_x;
-            let y = (selected_match.0 + padding_y).saturating_sub(state.scroll_pos as u16);
+            let x = selected_match.1 + state.padding_x;
+            let y = (selected_match.0 + state.padding_y).saturating_sub(state.scroll_offset as u16);
             if y > 0 && y < area.height - 1 {
                 let area = Rect::new(x, y, state.search.len() as u16, 1);
                 Block::new().style(style).render(area, buf);
@@ -399,19 +427,24 @@ impl StatefulWidgetRef for Content {
             return;
         }
 
-        if let Some(selection) = state.selection.clone() {
-            for position in selection.iter_positions(
+        if let Some(iter) = state.selection.clone().and_then(|selection| {
+            selection.iter_on_screen(
                 area.left(),
                 area.right(),
                 area.top(),
-                state.scroll_pos as u16,
-            ) {
+                min(state.num_lines as u16, area.bottom()),
+                state.scroll_offset as u16,
+                state.padding_x,
+                state.padding_y,
+            )
+        }) {
+            for position in iter {
                 let Some(cell) = buf.cell_mut(position) else {
                     continue;
                 };
                 cell.set_style(theme.highlight.active);
             }
-        }
+        };
     }
 }
 
@@ -466,131 +499,5 @@ impl StatefulWidgetRef for Search {
         }
 
         Line::from(spans).render(area, buf);
-    }
-}
-
-fn find_matches_positions(input: &Text, query: &str) -> Vec<(u16, u16)> {
-    let mut positions = Vec::new();
-
-    for (current_row, line) in input.lines.clone().into_iter().enumerate() {
-        let line = line.to_string();
-        for (index, _) in line.to_lowercase().match_indices(&query.to_lowercase()) {
-            positions.push((current_row as u16, index as u16));
-        }
-    }
-
-    positions
-}
-
-#[derive(Clone)]
-struct MouseSelection {
-    start: Position,
-    end: Position,
-}
-
-fn offset_position(pos: Position, scroll_pos: u16) -> Position {
-    let mut pos = pos;
-    pos.y += scroll_pos;
-    pos
-}
-
-impl MouseSelection {
-    fn new(start: Position, end: Position) -> Self {
-        Self { start, end }
-    }
-
-    fn start(&self) -> Position {
-        if is_greater(self.start, self.end) {
-            self.start
-        } else {
-            self.end
-        }
-    }
-
-    fn end(&self) -> Position {
-        if is_greater(self.start, self.end) {
-            self.end
-        } else {
-            self.start
-        }
-    }
-
-    /// Returns an iterator that iterates from `start` to `end`, returning positions.
-    fn iter_positions(
-        &self,
-        min_x: u16,
-        max_x: u16,
-        min_y: u16,
-        offset_y: u16,
-    ) -> MouseSelectionIterator {
-        let mut start = self.start();
-        let mut end = self.end();
-
-        start.y = max(start.y.saturating_sub(offset_y), min_y);
-        end.y = end.y.saturating_sub(offset_y);
-
-        MouseSelectionIterator::new(start, end, min_x, max_x, min_y)
-    }
-}
-
-struct MouseSelectionIterator {
-    current: Position,
-    end: Position,
-    min_y: u16,
-    min_x: u16,
-    max_x: u16,
-    done: bool,
-}
-
-fn is_greater(start: Position, end: Position) -> bool {
-    if end.y > start.y {
-        return true;
-    } else if end.y == start.y {
-        end.x >= start.x
-    } else {
-        false
-    }
-}
-
-impl MouseSelectionIterator {
-    fn new(start: Position, end: Position, min_x: u16, max_x: u16, min_y: u16) -> Self {
-        Self {
-            current: start,
-            end,
-            min_x,
-            max_x,
-            min_y,
-            done: false,
-        }
-    }
-}
-
-impl Iterator for MouseSelectionIterator {
-    type Item = Position;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
-
-        if self.end.y < self.min_y {
-            self.done;
-            return None;
-        }
-
-        let current_position = self.current.clone();
-
-        if self.current == self.end {
-            self.done = true;
-            return Some(current_position);
-        }
-
-        self.current.x += 1;
-        if self.current.x >= self.max_x {
-            self.current.x = self.min_x;
-            self.current.y += 1;
-        }
-
-        Some(current_position)
     }
 }

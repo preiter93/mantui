@@ -19,3 +19,4 @@ ansi-to-tui = "7.0.0"
 throbber-widgets-tui = "0.8.0"
 uuid = { version = "1.11.0", features = ["v4"] }
 arboard = "3.4.1"
+tui-event-controller = { version = "0.1.0", git = "https://github.com/preiter93/tui-event-controller.git" }

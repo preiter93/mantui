@@ -1,12 +1,9 @@
-mod controller;
-mod widget;
-
 use super::app::AppState;
 use ratatui::crossterm::event::{self, Event as CrosstermEvent};
 use ratatui::crossterm::event::{KeyEvent, MouseEvent};
 use std::thread;
 use std::time::{Duration, Instant};
-pub(crate) use widget::EventfulWidget;
+pub(crate) use tui_event_controller::EventfulWidget;
 
 /// Internal events.
 #[derive(Debug, Default)]
@@ -32,9 +29,10 @@ pub enum Event {
     Internal(InternalEvent),
 }
 
-pub(crate) type EventController = controller::EventController<AppState, Event>;
-pub(crate) type EventContext<'a> = controller::EventContext<'a, AppState, Event>;
-pub(crate) type IStatefulWidget<W> = widget::InteractiveStatefulWidget<AppState, Event, W>;
+pub(crate) type EventController = tui_event_controller::EventController<AppState, Event>;
+pub(crate) type EventContext<'a> = tui_event_controller::EventContext<'a, AppState, Event>;
+pub(crate) type IStatefulWidget<W> =
+    tui_event_controller::InteractiveStatefulWidget<AppState, Event, W>;
 
 pub(crate) fn spawn_event_loop(controller: &EventController, tick_rate_ms: u64) {
     let tick_rate = Duration::from_millis(tick_rate_ms);

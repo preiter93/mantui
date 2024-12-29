@@ -729,6 +729,7 @@ dependencies = [
  "tachyonfx",
  "throbber-widgets-tui",
  "tokio",
+ "tui-event-controller",
  "tui-widget-list",
  "uuid",
 ]
@@ -1290,6 +1291,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tui-event-controller"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/tui-event-controller.git#9fdb75a93c3b2ca79f1b60fc2a262983f3e22741"
+dependencies = [
+ "ratatui",
 ]
 
 [[package]]

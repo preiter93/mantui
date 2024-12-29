@@ -1296,7 +1296,7 @@ dependencies = [
 [[package]]
 name = "tui-event-controller"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/tui-event-controller.git#9fdb75a93c3b2ca79f1b60fc2a262983f3e22741"
+source = "git+https://github.com/preiter93/tui-event-controller.git#e741afbfef966a3fdae5fc9601fca3f0e9d0ff82"
 dependencies = [
  "ratatui",
 ]

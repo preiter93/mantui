@@ -1,5 +1,3 @@
-// #![allow(dead_code, unused)]
-
 use args::Args;
 use clap::Parser;
 use ui::App;

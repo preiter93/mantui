@@ -6,13 +6,13 @@ Written with [ratatui](https://github.com/ratatui/ratatui).
 
 ## Browse
 
-Browse through sections and man pages. Filter with `/`.
+Browse through sections and search through a list of man pages.
 
 ![](assets/selection.png)
 
 ## Read
 
-Read the man pages. Supports mouse scroll and selection.
+Read the man pages. Supports scrolling with the mouse and highlighting/copying text.
 
 ![](assets/man-tar.png)
 

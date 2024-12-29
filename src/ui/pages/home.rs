@@ -1,4 +1,4 @@
-use super::{ListPage, ListPageState, utils::centered_rect};
+use super::{utils::centered_rect, ListPage, ListPageState};
 use crate::ui::{
     app::{ActiveState, ActiveWidget, AppState},
     events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget},
@@ -10,7 +10,7 @@ use ratatui::{
     widgets::{Paragraph, StatefulWidgetRef},
 };
 use std::time::Instant;
-use tachyonfx::{CenteredShrink, Effect, EffectTimer, Interpolation, Shader, fx};
+use tachyonfx::{fx, CenteredShrink, Effect, EffectTimer, Interpolation, Shader};
 
 #[derive(Default, Clone)]
 pub(crate) struct HomePage {}

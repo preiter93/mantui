@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Command};
 
 pub(super) struct ManLister;

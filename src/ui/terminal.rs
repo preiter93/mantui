@@ -2,10 +2,10 @@ use anyhow::Result;
 use ratatui::crossterm::event::{DisableMouseCapture, EnableMouseCapture};
 use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
-    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+    disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use ratatui::prelude::CrosstermBackend;
-use std::io::{Stderr, stderr, stdout};
+use std::io::{stderr, stdout, Stderr};
 use std::ops::{Deref, DerefMut};
 
 pub(crate) struct Terminal {

@@ -1,5 +1,5 @@
 #![allow(clippy::cast_possible_truncation)]
-use std::cmp::{Ordering, max, min};
+use std::cmp::{max, min, Ordering};
 
 use ratatui::{
     layout::{Constraint, Direction, Layout, Position, Rect},

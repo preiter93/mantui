@@ -7,7 +7,7 @@ use tachyonfx::CenteredShrink;
 use throbber_widgets_tui::{Throbber, ThrobberState};
 use tui_widget_list::{ListBuilder, ListState, ListView};
 
-use crate::ui::app::{ActiveState, AppState, Navigation, load_commands_in_background};
+use crate::ui::app::{load_commands_in_background, ActiveState, AppState, Navigation};
 use crate::ui::events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget};
 use crate::ui::theme::get_theme;
 

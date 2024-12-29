@@ -6,7 +6,7 @@ use ratatui::{
 };
 use std::{
     marker::PhantomData,
-    sync::{Arc, Mutex, mpsc},
+    sync::{mpsc, Arc, Mutex},
     thread::{self},
     time::Duration,
 };
@@ -17,7 +17,7 @@ use crate::core::load_section;
 use super::events::{EventController, IStatefulWidget};
 use super::pages::{ManPage, ManPageState};
 use super::{
-    events::{Event, InternalEvent, spawn_event_loop},
+    events::{spawn_event_loop, Event, InternalEvent},
     pages::{HomePage, HomePageState, ListPage, ListPageState},
     terminal::Terminal,
 };

@@ -16,8 +16,8 @@ use ratatui::widgets::{
 use std::cmp::min;
 
 use super::utils::{
-    PositionAbsolut, PositionScreen, Selection, extract_text_from_lines, find_matches,
-    text_to_lines,
+    extract_text_from_lines, find_matches, text_to_lines, PositionAbsolut, PositionScreen,
+    Selection,
 };
 
 pub(crate) struct ManPage {

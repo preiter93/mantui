@@ -4,6 +4,7 @@ use ratatui::crossterm::execute;
 use ratatui::crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
+use ratatui::layout::Rect;
 use ratatui::prelude::CrosstermBackend;
 use std::io::{stderr, stdout, Stderr};
 use std::ops::{Deref, DerefMut};
@@ -32,6 +33,10 @@ impl Terminal {
         disable_raw_mode()?;
         execute!(stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
         Ok(())
+    }
+
+    pub fn area(&mut self) -> Rect {
+        self.terminal.get_frame().area()
     }
 }
 

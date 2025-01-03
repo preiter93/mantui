@@ -8,8 +8,8 @@ mod ui;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let _ = Args::parse();
+    let args = Args::parse();
 
-    App::run()?;
+    App::run(args.command)?;
     Ok(())
 }

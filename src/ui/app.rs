@@ -87,14 +87,31 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub(super) fn new(controller: &EventController) -> Self {
-        let page = HomePage {};
-        let state = HomePageState::new();
+    pub(super) fn new(
+        initial_command: Option<String>,
+        initial_area: Rect,
+        controller: &EventController,
+    ) -> Self {
+        let (active_page, active_state) = if let Some(command) = initial_command {
+            let page = ManPage::new(controller);
+            let state = ManPageState::new(&command, initial_area.width as usize);
+            (
+                ActiveWidget::Man(IStatefulWidget::new(page, controller)),
+                ActiveState::Man(state),
+            )
+        } else {
+            let page = HomePage {};
+            let state = HomePageState::new();
+            (
+                ActiveWidget::Home(IStatefulWidget::new(page, controller)),
+                ActiveState::Home(state),
+            )
+        };
 
         Self {
             should_quit: false,
-            active_page: ActiveWidget::Home(IStatefulWidget::new(page, controller)),
-            active_state: ActiveState::Home(state),
+            active_page,
+            active_state,
             selected_command: None,
             selected_section: 0,
             commands: None,
@@ -113,14 +130,15 @@ impl App<'_> {
         }
     }
 
-    pub fn run() -> Result<()> {
+    pub fn run(initial_command: Option<String>) -> Result<()> {
         let mut terminal = Terminal::new()?;
+        let initial_area = terminal.area();
 
         let controller = EventController::new();
         spawn_event_loop(&controller, 50);
 
         let mut app = Self::new();
-        let mut state = AppState::new(&controller);
+        let mut state = AppState::new(initial_command, initial_area, &controller);
 
         // Register global events.
         register_global_events(&controller);

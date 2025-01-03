@@ -1,4 +1,7 @@
 #![allow(unused)]
+use ratatheme::{DeserializeTheme, Subtheme};
+
+use std::error::Error;
 use std::sync::OnceLock;
 use tachyonfx::HslConvertable;
 
@@ -11,126 +14,82 @@ pub(super) fn get_theme() -> &'static Theme {
 
 static THEME: OnceLock<Theme> = OnceLock::new();
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, DeserializeTheme)]
 pub(super) struct Theme {
+    #[theme(style)]
     pub(super) base: Style,
+
+    #[theme(styles(active, selected, inactive))]
     pub(super) list: ListStyle,
-    pub(super) search: SearchStyle,
-    pub(super) block: BlockStyle,
-    pub(super) highlight: HighlightStyle,
+
+    #[theme(styles(active, inactive))]
+    pub(super) search: ActivatableStyle,
+
+    #[theme(styles(active, inactive))]
+    pub(super) block: ActivatableStyle,
+
+    #[theme(styles(active, inactive))]
+    pub(super) highlight: ActivatableStyle,
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        let default_style = StyleProperties {
-            foreground: Some(Color::White),
-            background: None,
-        };
+        let toml_str = r##"
+        [colors]
+        "gray300" = "#c0c0d8"
+        "gray500" = "#454554"
+        "gray700" = "#1c1c21"
+        "orange" = "#ff9900"
+        "charcoal" = "#1c1c20"
+        "red500" = "red"
+        "red700" = "#a51d1d"
 
-        let black = Color::Black;
-        let orange = Color::Rgb(255, 153, 0);
-        let charcoal = Color::Rgb(28, 28, 32);
-        let gray300 = Color::from_hsl(240., 23., 80.);
-        let gray500 = Color::from_hsl(240., 10., 30.);
-        let gray700 = Color::from_hsl(240., 7., 12.);
+        [base]
+        foreground = "white"
 
-        let red500 = Color::Red;
-        let red700 = Color::from_hsl(0.0, 70., 38.);
+        [list]
+        active.foreground = "white"
+        inactive.foreground = "gray500"
+        selected.foreground = "charcoal"
+        selected.background = "red500"
 
-        let inactive = StyleProperties {
-            foreground: Some(gray500),
-            background: default_style.background,
-        }
-        .into();
+        [search]
+        active.foreground = "white"
+        inactive.foreground = "gray500"
 
-        Self {
-            base: default_style.into(),
-            list: ListStyle {
-                even: default_style.into(),
-                odd: StyleProperties {
-                    foreground: default_style.foreground,
-                    background: None,
-                }
-                .into(),
-                selected: StyleProperties {
-                    foreground: Some(charcoal),
-                    background: Some(red500),
-                }
-                .into(),
-                inactive,
-            },
-            search: SearchStyle {
-                active: StyleProperties {
-                    foreground: default_style.foreground,
-                    background: default_style.background,
-                }
-                .into(),
-                inactive,
-            },
-            highlight: HighlightStyle {
-                active: StyleProperties {
-                    foreground: Some(black),
-                    background: Some(red500),
-                }
-                .into(),
-                inactive: StyleProperties {
-                    foreground: Some(black),
-                    background: Some(red700),
-                }
-                .into(),
-            },
-            block: BlockStyle {
-                active: default_style.into(),
-                inactive,
-            },
-        }
+        [highlight]
+        active.foreground = "black"
+        active.background = "red500"
+        inactive.foreground = "black"
+        inactive.background = "red700"
+
+        [block]
+        active.foreground = "white"
+        inactive.foreground = "gray500"
+    "##;
+
+        let deserializer = toml::Deserializer::new(toml_str);
+        Self::deserialize_theme(deserializer).unwrap()
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Subtheme)]
 pub(super) struct ListStyle {
-    pub(super) even: Style,
-    pub(super) odd: Style,
+    #[theme(style)]
+    pub(super) active: Style,
+
+    #[theme(style)]
+    pub(super) inactive: Style,
+
+    #[theme(style)]
     pub(super) selected: Style,
-    pub(super) inactive: Style,
 }
 
-#[derive(Debug, Clone)]
-pub(super) struct SearchStyle {
+#[derive(Debug, Clone, Subtheme)]
+pub(super) struct ActivatableStyle {
+    #[theme(style)]
     pub(super) active: Style,
+
+    #[theme(style)]
     pub(super) inactive: Style,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct BlockStyle {
-    pub(super) active: Style,
-    pub(super) inactive: Style,
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub(super) struct StyleProperties {
-    foreground: Option<Color>,
-    background: Option<Color>,
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct HighlightStyle {
-    pub(super) active: Style,
-    pub(super) inactive: Style,
-}
-
-impl From<StyleProperties> for Style {
-    fn from(value: StyleProperties) -> Self {
-        let mut style = Self::default();
-
-        if let Some(fg) = value.foreground {
-            style = style.fg(fg);
-        }
-
-        if let Some(bg) = value.background {
-            style = style.bg(bg);
-        }
-
-        style
-    }
 }

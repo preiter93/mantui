@@ -232,9 +232,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.6"
+version = "1.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d6dbb628b8f8555f86d0323c2eb39e3ec81901f4b83e091db8a6a76d316a333"
+checksum = "a012a0df96dd6d06ba9a1b29d6402d1a5d77c6befd2566afdc26e10603dc93d7"
 dependencies = [
  "shlex",
 ]
@@ -323,9 +323,9 @@ checksum = "54261aba646433cb567ec89844be4c4825ca92a4f8afba52fc4dd88436e31bbd"
 
 [[package]]
 name = "compact_str"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6050c3a16ddab2e412160b31f2c871015704239bca62f72f6e5f0be631d3f644"
+checksum = "3b79c4069c6cad78e2e0cdfcbd26275770669fb39fd308a752dc110e83b9af32"
 dependencies = [
  "castaway",
  "cfg-if",
@@ -623,6 +623,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "indexmap"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
+dependencies = [
+ "equivalent",
+ "hashbrown",
+]
+
+[[package]]
 name = "indoc"
 version = "2.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -725,10 +735,13 @@ dependencies = [
  "arboard",
  "chrono",
  "clap",
+ "ratatheme",
  "ratatui",
+ "serde",
  "tachyonfx",
  "throbber-widgets-tui",
  "tokio",
+ "toml",
  "tui-event-controller",
  "tui-widget-list",
  "uuid",
@@ -1027,6 +1040,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "ratatheme"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/ratatheme.git?branch=main#9dfd5846e0c5b53c340d5735e8f674fc09e39ab4"
+dependencies = [
+ "ratatheme-derive",
+ "ratatheme-types",
+ "ratatui",
+ "serde",
+]
+
+[[package]]
+name = "ratatheme-derive"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/ratatheme.git?branch=main#9dfd5846e0c5b53c340d5735e8f674fc09e39ab4"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "ratatheme-types",
+ "ratatui",
+ "serde",
+ "syn",
+]
+
+[[package]]
+name = "ratatheme-types"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/ratatheme.git?branch=main#9dfd5846e0c5b53c340d5735e8f674fc09e39ab4"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "ratatui"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1111,6 +1156,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "serde_spanned"
+version = "0.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1209,9 +1263,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.93"
+version = "2.0.94"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c786062daee0d6db1132800e623df74274a0a87322d8e183338e01b3d98d058"
+checksum = "987bc0be1cdea8b10216bd06e2ca407d40b9543468fafd3ddfb02f36e77f71f3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1294,9 +1348,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "toml"
+version = "0.8.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1ed1f98e3fdc28d6d910e6737ae6ab1a93bf1985935a1193e68f93eeb68d24e"
+dependencies = [
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_edit",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.22.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
+dependencies = [
+ "indexmap",
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "winnow",
+]
+
+[[package]]
 name = "tui-event-controller"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/tui-event-controller.git#e741afbfef966a3fdae5fc9601fca3f0e9d0ff82"
+source = "git+https://github.com/preiter93/tui-event-controller.git#9d456a625347ff6af477bd1f1e2b40bc7898ff93"
 dependencies = [
  "ratatui",
 ]
@@ -1604,6 +1692,15 @@ name = "windows_x86_64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+
+[[package]]
+name = "winnow"
+version = "0.6.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "39281189af81c07ec09db316b302a3e67bf9bd7cbf6c820b50e35fee9c2fa980"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "x11rb"

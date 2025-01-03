@@ -337,10 +337,8 @@ impl StatefulWidgetRef for Commands {
 
             let style = if state.search_active {
                 theme.list.inactive
-            } else if context.index % 2 == 0 {
-                theme.list.even
             } else {
-                theme.list.odd
+                theme.list.active
             };
             line = line.style(style);
 
@@ -413,7 +411,7 @@ impl StatefulWidgetRef for Section {
             let mut line = Line::from(section);
 
             if context.is_selected {
-                line = line.style(theme.list.even);
+                line = line.style(theme.list.active);
             } else {
                 line = line.style(theme.list.inactive);
             }

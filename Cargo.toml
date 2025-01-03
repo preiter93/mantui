@@ -22,7 +22,6 @@ arboard = "3.4.1"
 tui-event-controller = { version = "0.1.0", git = "https://github.com/preiter93/tui-event-controller.git" }
 
 serde = { version = "1.0" }
-ratatheme = { version = "0.1.0", git = "https://github.com/preiter93/ratatheme.git" }
-# ratatheme = { version = "0.1.0", path = "../ratatheme/ratatheme", package = "ratatheme" }
+ratatheme = { version = "0.1.0", git = "https://github.com/preiter93/ratatheme.git", package = "ratatheme" }
 
 toml = "0.8"

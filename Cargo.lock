@@ -445,12 +445,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "diff"
-version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56254986775e3233ffa9c4d7d3faaf6d36a2c09d30b20687e9f88bc8bafc16c8"
-
-[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -640,13 +634,12 @@ checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
 
 [[package]]
 name = "instability"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "898e106451f7335950c9cc64f8ec67b5f65698679ac67ed00619aeef14e1cf75"
+checksum = "894813a444908c0c8c0e221b041771d107c4a21de1d317dc49bcc66e3c9e5b3f"
 dependencies = [
  "darling",
  "indoc",
- "pretty_assertions",
  "proc-macro2",
  "quote",
  "syn",
@@ -972,16 +965,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pretty_assertions"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ae130e2f271fbc2ac3a40fb1d07180839cdbbe443c7a27e1e3c13c5cac0116d"
-dependencies = [
- "diff",
- "yansi",
-]
-
-[[package]]
 name = "prettyplease"
 version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,7 +1025,7 @@ dependencies = [
 [[package]]
 name = "ratatheme"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#08decf7b28785f6b227b2dbb0b8863f768566f53"
+source = "git+https://github.com/preiter93/ratatheme.git#7440f82d7f0bbca622b7875682bfd3e1dc45c019"
 dependencies = [
  "ratatheme-derive",
  "ratatheme-types",
@@ -1053,7 +1036,7 @@ dependencies = [
 [[package]]
 name = "ratatheme-derive"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#08decf7b28785f6b227b2dbb0b8863f768566f53"
+source = "git+https://github.com/preiter93/ratatheme.git#7440f82d7f0bbca622b7875682bfd3e1dc45c019"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1063,7 +1046,7 @@ dependencies = [
 [[package]]
 name = "ratatheme-types"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#08decf7b28785f6b227b2dbb0b8863f768566f53"
+source = "git+https://github.com/preiter93/ratatheme.git#7440f82d7f0bbca622b7875682bfd3e1dc45c019"
 dependencies = [
  "serde",
 ]
@@ -1715,12 +1698,6 @@ name = "x11rb-protocol"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec107c4503ea0b4a98ef47356329af139c0a4f7750e621cf2973cd3385ebcb3d"
-
-[[package]]
-name = "yansi"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 
 [[package]]
 name = "zerocopy"

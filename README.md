@@ -20,6 +20,16 @@ Download the latest binary from the [releases page](https://github.com/preiter93
 
 ## Usage
 
+To launch the application:
+```
+mantui
+```
+
+To view a specific man page, provide the command name:
+```
+mantui tar
+```
+
 Browse through sections and search through a list of man pages.
 
 ![](assets/selection.png)

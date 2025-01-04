@@ -4,10 +4,10 @@ use std::{
     process::{Command, Stdio},
 };
 
-pub(crate) struct Manual;
+pub(crate) struct Reader;
 
-impl Manual {
-    pub(super) fn fetch(command: &str, width: &str) -> Result<String> {
+impl Reader {
+    pub(super) fn read(command: &str, width: &str) -> Result<String> {
         let process = Command::new("man")
             .arg(strip_section(command))
             .env("MANWIDTH", width)

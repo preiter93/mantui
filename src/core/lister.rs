@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use std::{collections::HashSet, process::Command};
 
-pub(super) struct ManLister;
+pub(super) struct Lister;
 
-impl ManLister {
-    pub(super) fn section(section: String) -> Result<Vec<String>> {
+impl Lister {
+    pub(super) fn list_section(section: String) -> Result<Vec<String>> {
         let output = Command::new("man")
             .arg("-k")
             .arg("-S")

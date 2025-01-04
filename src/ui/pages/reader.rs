@@ -1,6 +1,6 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss, clippy::cast_precision_loss)]
-use crate::core::get_manual;
+use crate::core::read_command;
 use crate::ui::app::{ActiveState, AppState, Navigation};
 use crate::ui::events::{Event, EventContext, EventController, EventfulWidget, IStatefulWidget};
 use crate::ui::theme::get_theme;
@@ -20,12 +20,12 @@ use super::utils::{
     Selection,
 };
 
-pub(crate) struct ManPage {
+pub(crate) struct ReaderPage {
     content: IStatefulWidget<Content>,
     search: IStatefulWidget<Search>,
 }
 
-impl ManPage {
+impl ReaderPage {
     pub(crate) fn new(controller: &EventController) -> Self {
         Self {
             content: IStatefulWidget::new(Content, controller),
@@ -35,7 +35,7 @@ impl ManPage {
 }
 
 #[derive(Default)]
-pub(crate) struct ManPageState {
+pub(crate) struct ReaderPageState {
     text: Text<'static>,
     scroll_offset: usize,
     page_height: usize,
@@ -53,35 +53,29 @@ pub(crate) struct ManPageState {
     padding_y: u16,
 }
 
-impl ManPageState {
+impl ReaderPageState {
     pub(crate) fn new(command: &str, width: usize) -> Self {
         let reduced_width = (width as f64 * 0.9) as u16;
 
-        let width = format!("{reduced_width}");
-        let text_raw = get_manual(command, &width).unwrap_or_default();
-
-        let text =
-            IntoText::into_text(&text_raw).unwrap_or(Text::from("Could not convert ansi to tui."));
-        let num_lines = text.lines.len();
-
-        let scrollbar = ScrollbarState::new(0).position(0);
-
-        let clipboard = Clipboard::new().ok();
+        let ansi = read_command(command, &(format!("{reduced_width}"))).unwrap_or_default();
+        let text = ansi
+            .into_text()
+            .unwrap_or(Text::from("Could not convert ansi to tui."));
 
         Self {
             scroll_offset: 0,
             page_height: 0,
             max_scroll_pos: 0,
-            num_lines,
+            num_lines: text.lines.len(),
             text,
-            scrollbar,
+            scrollbar: ScrollbarState::new(0).position(0),
             search: String::new(),
             matches: Vec::new(),
             selected_match: None,
             search_active: false,
             selection: None,
             selection_active: false,
-            clipboard,
+            clipboard: Clipboard::new().ok(),
             padding_x: 2,
             padding_y: 1,
         }
@@ -176,13 +170,13 @@ impl ManPageState {
     }
 }
 
-impl EventfulWidget<AppState, Event> for ManPage {
+impl EventfulWidget<AppState, Event> for ReaderPage {
     fn unique_key() -> String {
         String::from("ManPage")
     }
 
     fn on_event(ctx: EventContext, app_state: &mut AppState, _area: Option<Rect>) {
-        let ActiveState::Man(state) = &mut app_state.active_state else {
+        let ActiveState::Read(state) = &mut app_state.active_state else {
             return;
         };
 
@@ -252,8 +246,8 @@ impl EventfulWidget<AppState, Event> for ManPage {
     }
 }
 
-impl StatefulWidgetRef for ManPage {
-    type State = ManPageState;
+impl StatefulWidgetRef for ReaderPage {
+    type State = ReaderPageState;
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let [main, search] = Layout::default()
@@ -309,7 +303,7 @@ impl EventfulWidget<AppState, Event> for Content {
     }
 
     fn on_event(ctx: EventContext, app_state: &mut AppState, area: Option<Rect>) {
-        let ActiveState::Man(state) = &mut app_state.active_state else {
+        let ActiveState::Read(state) = &mut app_state.active_state else {
             return;
         };
 
@@ -365,7 +359,7 @@ impl EventfulWidget<AppState, Event> for Content {
 }
 
 impl StatefulWidgetRef for Content {
-    type State = ManPageState;
+    type State = ReaderPageState;
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
@@ -446,7 +440,7 @@ impl EventfulWidget<AppState, Event> for Search {
     }
 
     fn on_event(ctx: EventContext, app_state: &mut AppState, area: Option<Rect>) {
-        let ActiveState::Man(state) = &mut app_state.active_state else {
+        let ActiveState::Read(state) = &mut app_state.active_state else {
             return;
         };
 
@@ -470,7 +464,7 @@ impl EventfulWidget<AppState, Event> for Search {
 }
 
 impl StatefulWidgetRef for Search {
-    type State = ManPageState;
+    type State = ReaderPageState;
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
 

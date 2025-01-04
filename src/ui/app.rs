@@ -15,7 +15,7 @@ use uuid::Uuid;
 use crate::core::load_section;
 
 use super::events::{EventController, IStatefulWidget};
-use super::pages::{ManPage, ManPageState};
+use super::pages::{ReaderPage, ReaderPageState};
 use super::{
     events::{spawn_event_loop, Event, InternalEvent},
     pages::{HomePage, HomePageState, ListPage, ListPageState},
@@ -47,12 +47,12 @@ impl Navigation {
                     return;
                 };
                 if let Some(command) = page_state.selected_command() {
-                    let page_state = ManPageState::new(&command, page_state.page_width);
-                    state.active_state = ActiveState::Man(page_state);
+                    let page_state = ReaderPageState::new(&command, page_state.page_width);
+                    state.active_state = ActiveState::Read(page_state);
 
-                    let page = ManPage::new(controller);
+                    let page = ReaderPage::new(controller);
                     let page = IStatefulWidget::new(page, controller);
-                    state.active_page = ActiveWidget::Man(page);
+                    state.active_page = ActiveWidget::Read(page);
                 }
             }
         }
@@ -62,13 +62,13 @@ impl Navigation {
 pub(crate) enum ActiveWidget {
     Home(IStatefulWidget<HomePage>),
     List(IStatefulWidget<ListPage>),
-    Man(IStatefulWidget<ManPage>),
+    Read(IStatefulWidget<ReaderPage>),
 }
 
 pub(crate) enum ActiveState {
     Home(HomePageState),
     List(ListPageState),
-    Man(ManPageState),
+    Read(ReaderPageState),
 }
 
 pub struct AppState {
@@ -93,11 +93,11 @@ impl AppState {
         controller: &EventController,
     ) -> Self {
         let (active_page, active_state) = if let Some(command) = initial_command {
-            let page = ManPage::new(controller);
-            let state = ManPageState::new(&command, initial_area.width as usize);
+            let page = ReaderPage::new(controller);
+            let state = ReaderPageState::new(&command, initial_area.width as usize);
             (
-                ActiveWidget::Man(IStatefulWidget::new(page, controller)),
-                ActiveState::Man(state),
+                ActiveWidget::Read(IStatefulWidget::new(page, controller)),
+                ActiveState::Read(state),
             )
         } else {
             let page = HomePage {};
@@ -189,7 +189,7 @@ impl StatefulWidget for &mut App<'_> {
             (ActiveWidget::List(page), ActiveState::List(state)) => {
                 page.render_ref(area, buf, state);
             }
-            (ActiveWidget::Man(page), ActiveState::Man(state)) => {
+            (ActiveWidget::Read(page), ActiveState::Read(state)) => {
                 page.render_ref(area, buf, state);
             }
             _ => {}

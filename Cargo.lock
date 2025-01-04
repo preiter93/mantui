@@ -1076,7 +1076,7 @@ dependencies = [
 [[package]]
 name = "ratatheme"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#11087a6b24776e2f42e739e4503552849eb4ebbd"
+source = "git+https://github.com/preiter93/ratatheme.git#b8d562ed9850b0172f49757c85e3aa69112289df"
 dependencies = [
  "ratatheme-derive",
  "ratatheme-internal",
@@ -1085,9 +1085,8 @@ dependencies = [
 [[package]]
 name = "ratatheme-derive"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#11087a6b24776e2f42e739e4503552849eb4ebbd"
+source = "git+https://github.com/preiter93/ratatheme.git#b8d562ed9850b0172f49757c85e3aa69112289df"
 dependencies = [
- "csscolorparser",
  "proc-macro2",
  "quote",
  "syn",
@@ -1096,9 +1095,10 @@ dependencies = [
 [[package]]
 name = "ratatheme-internal"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#11087a6b24776e2f42e739e4503552849eb4ebbd"
+source = "git+https://github.com/preiter93/ratatheme.git#b8d562ed9850b0172f49757c85e3aa69112289df"
 dependencies = [
  "csscolorparser",
+ "ratatui",
  "serde",
 ]
 

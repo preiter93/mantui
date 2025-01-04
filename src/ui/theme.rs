@@ -41,8 +41,8 @@ impl Default for Theme {
         "gray700" = "#1c1c21"
         "orange" = "#ff9900"
         "charcoal" = "#1c1c20"
-        "red500" = "red"
-        "red700" = "#a51d1d"
+        "red500" = "hsl(337, 100%, 48%)"
+        "red700" = "hsl(337, 70%, 38%)"
 
         [base]
         foreground = "white"
@@ -73,7 +73,7 @@ impl Default for Theme {
     }
 }
 
-#[derive(Debug, Clone, Subtheme)]
+#[derive(Debug, Default, Clone, Subtheme)]
 pub(super) struct ListStyle {
     #[theme(style)]
     pub(super) active: Style,
@@ -85,7 +85,7 @@ pub(super) struct ListStyle {
     pub(super) selected: Style,
 }
 
-#[derive(Debug, Clone, Subtheme)]
+#[derive(Debug, Default, Clone, Subtheme)]
 pub(super) struct ActivatableStyle {
     #[theme(style)]
     pub(super) active: Style,

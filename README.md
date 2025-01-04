@@ -7,6 +7,12 @@ Written with [ratatui](https://github.com/ratatui/ratatui).
 
 ## Installation
 
+### Brew
+
+Install with brew
+```
+brew install preiter93/mantui/mantui
+```
 
 ### Download Binary
 

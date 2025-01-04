@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 use crate::core::load_section;
 
+use super::debug::log_to_file;
 use super::events::{EventController, IStatefulWidget};
 use super::pages::{ReaderPage, ReaderPageState};
 use super::{
@@ -28,31 +29,36 @@ pub struct App<'a> {
 
 pub(crate) enum Navigation {
     List,
-    Man,
+    Reader,
 }
 
 impl Navigation {
-    pub(crate) fn activate(&self, state: &mut AppState, controller: &EventController) {
-        match self {
+    pub(crate) fn navigate_to(to: &Self, app_state: &mut AppState, controller: &EventController) {
+        match to {
             Navigation::List => {
-                let page_state = ListPageState::new(state);
-                state.active_state = ActiveState::List(page_state);
+                let state = ListPageState::new(app_state);
+                app_state.active_state = ActiveState::List(state);
 
-                let page = ListPage::new(controller);
-                let page = IStatefulWidget::new(page, controller);
-                state.active_page = ActiveWidget::List(page);
+                let page = IStatefulWidget::new(ListPage::new(controller), controller);
+                app_state.active_page = ActiveWidget::List(page);
             }
-            Navigation::Man => {
-                let ActiveState::List(page_state) = &mut state.active_state else {
+            Navigation::Reader => {
+                let ActiveState::List(old_state) = &mut app_state.active_state else {
                     return;
                 };
-                if let Some(command) = page_state.selected_command() {
-                    let page_state = ReaderPageState::new(&command, page_state.page_width);
-                    state.active_state = ActiveState::Read(page_state);
+                if let Some(command) = old_state.selected_command() {
+                    // Store the selected command for later in case we navigate
+                    // back again from the reader to the list
+                    app_state.selected_command = old_state.selected_command_index();
+                    app_state.selected_section = old_state.selected_section_index();
+                    app_state.command_search = old_state.command_search();
+                    app_state.loaded_commands = old_state.loaded_commands();
 
-                    let page = ReaderPage::new(controller);
-                    let page = IStatefulWidget::new(page, controller);
-                    state.active_page = ActiveWidget::Read(page);
+                    let state = ReaderPageState::new(&command, old_state.page_width());
+                    app_state.active_state = ActiveState::Read(state);
+
+                    let page = IStatefulWidget::new(ReaderPage::new(controller), controller);
+                    app_state.active_page = ActiveWidget::Read(page);
                 }
             }
         }
@@ -78,9 +84,9 @@ pub struct AppState {
 
     pub(super) selected_command: Option<usize>,
     pub(super) selected_section: usize,
-    pub(super) commands: Option<Vec<String>>,
+    pub(super) loaded_commands: Option<Vec<String>>,
 
-    pub(super) search: String,
+    pub(super) command_search: String,
 
     pub(crate) sx: mpsc::Sender<Event>,
     debouncer: Arc<Mutex<Uuid>>,
@@ -114,8 +120,8 @@ impl AppState {
             active_state,
             selected_command: None,
             selected_section: 0,
-            commands: None,
-            search: String::new(),
+            loaded_commands: None,
+            command_search: String::new(),
             sx: controller.get_sender(),
             debouncer: Arc::new(Mutex::new(Uuid::new_v4())),
         }
@@ -167,10 +173,14 @@ pub fn register_global_events(controller: &EventController) {
             }
         }
         Event::Internal(InternalEvent::Loaded((commands, section))) => {
-            if state.selected_section == *section {
-                state.commands = Some(commands.clone());
-                if let ActiveState::List(state) = &mut state.active_state {
-                    state.commands = Some(commands.clone());
+            if let ActiveState::List(state) = &mut state.active_state {
+                log_to_file(format!(
+                    "{:?} {:?}",
+                    section,
+                    state.selected_section_index()
+                ));
+                if state.selected_section_index() == *section {
+                    state.set_loaded_commands(commands);
                 }
             }
         }
@@ -226,7 +236,9 @@ pub(crate) fn load_commands_in_background(ctx: &AppState, section: usize) {
         }
 
         // Load the commands after the debounce check
+        log_to_file("load section");
         let commands = load_section(section_str).unwrap_or_default();
+        log_to_file("load section done");
 
         // Send the result
         let event = InternalEvent::Loaded((commands, section));

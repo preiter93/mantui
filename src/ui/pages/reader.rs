@@ -230,7 +230,7 @@ impl EventfulWidget<AppState, Event> for ReaderPage {
                     } else if state.selection.is_some() {
                         state.selection = None;
                     } else if state.search.is_empty() {
-                        Navigation::List.activate(app_state, ctx.controller);
+                        Navigation::navigate_to(&Navigation::List, app_state, ctx.controller);
                     } else {
                         state.search = String::new();
                         state.matches = Vec::new();

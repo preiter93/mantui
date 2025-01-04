@@ -14,12 +14,10 @@ use crate::ui::theme::get_theme;
 macro_rules! select_section {
     ($state:expr, $ctx:expr, $section:expr) => {
         if $state.section_list.selected != Some($section) {
-            $state.commands = None;
+            $state.loaded_commands = None;
             $state.section_list.select(Some($section));
             $state.command_list.select(None);
             $state.search = String::new();
-            $ctx.search = String::new();
-            $ctx.selected_section = $section;
             load_commands_in_background($ctx, $section);
         }
     };
@@ -118,7 +116,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                     page_state.section_active = false;
                     return;
                 }
-                Navigation::Man.activate(state, ctx.controller);
+                Navigation::navigate_to(&Navigation::Reader, state, ctx.controller);
             }
             KeyCode::Char('/') if !page_state.search_active => {
                 page_state.search_active = true;
@@ -145,13 +143,13 @@ impl EventfulWidget<AppState, Event> for ListPage {
 
 #[derive(Default)]
 pub(crate) struct ListPageState {
-    pub(crate) commands: Option<Vec<String>>,
+    loaded_commands: Option<Vec<String>>,
     command_list: ListState,
     section_list: ListState,
     num_elements: u16,
     search_active: bool,
     search: String,
-    pub(crate) page_width: usize,
+    page_width: usize,
     throbber: ThrobberState,
     section_active: bool,
 }
@@ -165,20 +163,20 @@ impl ListPageState {
         section_list.select(Some(state.selected_section));
 
         Self {
-            commands: state.commands.clone(),
+            loaded_commands: state.loaded_commands.clone(),
             command_list,
             section_list,
             num_elements: 0,
             search_active: false,
             section_active: false,
-            search: state.search.clone(),
+            search: state.command_search.clone(),
             page_width: 0,
             throbber: ThrobberState::default(),
         }
     }
 
     fn filtered_commands(&self) -> Option<Vec<String>> {
-        let Some(commands) = &self.commands else {
+        let Some(commands) = &self.loaded_commands else {
             return None;
         };
 
@@ -191,12 +189,36 @@ impl ListPageState {
         Some(filtered)
     }
 
+    pub(crate) fn loaded_commands(&self) -> Option<Vec<String>> {
+        self.loaded_commands.clone()
+    }
+
+    pub(crate) fn set_loaded_commands(&mut self, commands: &[String]) {
+        self.loaded_commands = Some(commands.to_vec());
+    }
+
+    pub(crate) fn page_width(&self) -> usize {
+        self.page_width
+    }
+
     pub(crate) fn selected_command(&self) -> Option<String> {
         let Some(commands) = &self.filtered_commands() else {
             return None;
         };
 
         self.command_list.selected.map(|i| commands[i].clone())
+    }
+
+    pub(crate) fn selected_command_index(&self) -> Option<usize> {
+        self.command_list.selected
+    }
+
+    pub(crate) fn selected_section_index(&self) -> usize {
+        self.section_list.selected.unwrap_or_default()
+    }
+
+    pub(crate) fn command_search(&self) -> String {
+        self.search.to_string()
     }
 
     fn scroll_down(&mut self) {
@@ -289,7 +311,7 @@ impl EventfulWidget<AppState, Event> for Commands {
                     let mouse_select = scroll_offset_index + diff;
                     if mouse_select < page_state.filtered_commands().map_or(0, |l| l.len()) {
                         if page_state.command_list.selected == Some(mouse_select) {
-                            Navigation::Man.activate(state, ctx.controller);
+                            Navigation::navigate_to(&Navigation::Reader, state, ctx.controller);
                         } else {
                             page_state.command_list.select(Some(mouse_select));
                         }

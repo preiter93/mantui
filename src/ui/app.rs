@@ -14,7 +14,6 @@ use uuid::Uuid;
 
 use crate::core::load_section;
 
-use super::debug::log_to_file;
 use super::events::{EventController, IStatefulWidget};
 use super::pages::{ReaderPage, ReaderPageState};
 use super::{
@@ -174,15 +173,11 @@ pub fn register_global_events(controller: &EventController) {
         }
         Event::Internal(InternalEvent::Loaded((commands, section))) => {
             if let ActiveState::List(state) = &mut state.active_state {
-                log_to_file(format!(
-                    "{:?} {:?}",
-                    section,
-                    state.selected_section_index()
-                ));
                 if state.selected_section_index() == *section {
                     state.set_loaded_commands(commands);
                 }
             }
+            state.loaded_commands = Some(commands.clone());
         }
         _ => {}
     });
@@ -236,9 +231,7 @@ pub(crate) fn load_commands_in_background(ctx: &AppState, section: usize) {
         }
 
         // Load the commands after the debounce check
-        log_to_file("load section");
         let commands = load_section(section_str).unwrap_or_default();
-        log_to_file("load section done");
 
         // Send the result
         let event = InternalEvent::Loaded((commands, section));

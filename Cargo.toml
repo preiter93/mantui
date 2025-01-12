@@ -11,7 +11,7 @@ license = "MIT"
 anyhow = "1.0.95"
 chrono = { version = "0.4.38", features = ["serde"] }
 clap = { version = "4.5.23", features = ["derive"] }
-ratatui = { version = "0.29.0", features = ["unstable-widget-ref"] }
+ratatui = { version = "0.29.0", features = ["unstable-widget-ref", "serde"] }
 tachyonfx = { version = "0.10", features = ["std-duration"] }
 tui-widget-list = "0.13"
 tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
@@ -21,7 +21,8 @@ uuid = { version = "1.11.0", features = ["v4"] }
 arboard = "3.4.1"
 tui-event-controller = { version = "0.1.0", git = "https://github.com/preiter93/tui-event-controller.git" }
 serde = { version = "1.0" }
-ratatheme = { version = "0.1.0", git = "https://github.com/preiter93/ratatheme.git", package = "ratatheme" }
+tui-theme-builder = { version = "0.1.0", git = "https://github.com/preiter93/tui-theme-builder.git" }
+# ratatheme = { version = "0.1.0", git = "https://github.com/preiter93/ratatheme.git", package = "ratatheme" }
 # ratatheme = { version = "0.1.0", path = "../ratatheme/ratatheme", package = "ratatheme" }
 
 toml = "0.8"

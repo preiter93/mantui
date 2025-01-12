@@ -339,13 +339,13 @@ impl StatefulWidgetRef for Commands {
                 .constraints([Constraint::Length(1), Constraint::Length(1)])
                 .areas(area);
             StatefulWidget::render(
-                Throbber::default().style(theme.base),
+                Throbber::default().style(theme.base.style),
                 throbber.inner_centered(1, 1),
                 buf,
                 &mut state.throbber,
             );
             Line::from("Loading...")
-                .style(theme.base)
+                .style(theme.base.style)
                 .italic()
                 .render(text, buf);
             state.throbber.calc_next();

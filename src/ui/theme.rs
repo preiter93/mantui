@@ -1,11 +1,42 @@
 #![allow(unused)]
-use ratatheme::{DeserializeTheme, Subtheme};
+use serde::Deserialize;
+use tui_theme_builder::ThemeBuilder;
 
 use std::error::Error;
 use std::sync::OnceLock;
 use tachyonfx::HslConvertable;
 
 use ratatui::style::{Color, Style};
+
+#[derive(Debug, Deserialize)]
+pub struct Colors {
+    pub white: Color,
+    pub black: Color,
+    pub gray300: Color,
+    pub gray500: Color,
+    pub gray700: Color,
+    pub orange: Color,
+    pub charcoal: Color,
+    pub red500: Color,
+    pub red700: Color,
+}
+
+impl Default for Colors {
+    fn default() -> Self {
+        let s = r##"
+        "white" = "white"
+        "black" = "black"
+        "gray300" = "#c0c0d8"
+        "gray500" = "#454554"
+        "gray700" = "#1c1c21"
+        "orange" = "#ff9900"
+        "charcoal" = "#1c1c20"
+        "red500" = "#f5005e"
+        "red700" = "#a51d51"
+        "##;
+        toml::from_str(s).unwrap()
+    }
+}
 
 #[must_use]
 pub(super) fn get_theme() -> &'static Theme {
@@ -14,82 +45,83 @@ pub(super) fn get_theme() -> &'static Theme {
 
 static THEME: OnceLock<Theme> = OnceLock::new();
 
-#[derive(Debug, Clone, DeserializeTheme)]
+#[derive(Debug, Clone)]
 pub(super) struct Theme {
-    #[theme(style)]
-    pub(super) base: Style,
+    pub(super) base: BaseStyle,
 
-    #[theme(styles(active, selected, inactive))]
     pub(super) list: ListStyle,
 
-    #[theme(styles(active, inactive))]
-    pub(super) search: ActivatableStyle,
+    pub(super) search: SearchStyle,
 
-    #[theme(styles(active, inactive))]
-    pub(super) block: ActivatableStyle,
+    pub(super) block: BlockStyle,
 
-    #[theme(styles(active, inactive))]
-    pub(super) highlight: ActivatableStyle,
+    pub(super) highlight: HighlightStyle,
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        let toml_str = r##"
-        [colors]
-        "gray300" = "#c0c0d8"
-        "gray500" = "#454554"
-        "gray700" = "#1c1c21"
-        "orange" = "#ff9900"
-        "charcoal" = "#1c1c20"
-        "red500" = "hsl(337, 100%, 48%)"
-        "red700" = "hsl(337, 70%, 38%)"
-
-        [base]
-        foreground = "white"
-
-        [list]
-        active.foreground = "white"
-        inactive.foreground = "gray500"
-        selected.foreground = "charcoal"
-        selected.background = "red500"
-
-        [search]
-        active.foreground = "white"
-        inactive.foreground = "gray500"
-
-        [highlight]
-        active.foreground = "black"
-        active.background = "red500"
-        inactive.foreground = "black"
-        inactive.background = "red700"
-
-        [block]
-        active.foreground = "white"
-        inactive.foreground = "gray500"
-    "##;
-
-        let deserializer = toml::Deserializer::new(toml_str);
-        Self::deserialize_theme(deserializer).unwrap()
+        let colors = Colors::default();
+        let base = BaseStyle::build(&colors);
+        let list = ListStyle::build(&colors);
+        let search = SearchStyle::build(&colors);
+        let block = BlockStyle::build(&colors);
+        let highlight = HighlightStyle::build(&colors);
+        Self {
+            base,
+            list,
+            search,
+            block,
+            highlight,
+        }
     }
 }
 
-#[derive(Debug, Default, Clone, Subtheme)]
+#[derive(Debug, Default, Clone, ThemeBuilder)]
+#[builder(context=Colors)]
 pub(super) struct ListStyle {
-    #[theme(style)]
+    #[style(fg=white)]
     pub(super) active: Style,
 
-    #[theme(style)]
+    #[style(fg=gray500)]
     pub(super) inactive: Style,
 
-    #[theme(style)]
+    #[style(fg=charcoal, bg=red500)]
     pub(super) selected: Style,
 }
 
-#[derive(Debug, Default, Clone, Subtheme)]
-pub(super) struct ActivatableStyle {
-    #[theme(style)]
+#[derive(Debug, Default, Clone, ThemeBuilder)]
+#[builder(context=Colors)]
+pub(super) struct BaseStyle {
+    #[style(fg=white)]
+    pub(super) style: Style,
+}
+
+#[derive(Debug, Default, Clone, ThemeBuilder)]
+#[builder(context=Colors)]
+pub(super) struct SearchStyle {
+    #[style(fg=white)]
     pub(super) active: Style,
 
-    #[theme(style)]
+    #[style(fg=gray500)]
+    pub(super) inactive: Style,
+}
+
+#[derive(Debug, Default, Clone, ThemeBuilder)]
+#[builder(context=Colors)]
+pub(super) struct BlockStyle {
+    #[style(fg=white)]
+    pub(super) active: Style,
+
+    #[style(fg=gray500)]
+    pub(super) inactive: Style,
+}
+
+#[derive(Debug, Default, Clone, ThemeBuilder)]
+#[builder(context=Colors)]
+pub(super) struct HighlightStyle {
+    #[style(fg=black, bg=red500)]
+    pub(super) active: Style,
+
+    #[style(fg=black, bg=red700)]
     pub(super) inactive: Style,
 }

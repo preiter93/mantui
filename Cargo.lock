@@ -156,6 +156,9 @@ name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "block2"
@@ -332,6 +335,7 @@ dependencies = [
  "itoa",
  "rustversion",
  "ryu",
+ "serde",
  "static_assertions",
 ]
 
@@ -416,6 +420,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46f9a16a848a7fb95dd47ce387ac1ee9a6df879ba784b815537fcd388a1a8288"
 dependencies = [
  "phf",
+ "serde",
 ]
 
 [[package]]
@@ -737,7 +742,6 @@ dependencies = [
  "arboard",
  "chrono",
  "clap",
- "ratatheme",
  "ratatui",
  "serde",
  "tachyonfx",
@@ -745,6 +749,7 @@ dependencies = [
  "tokio",
  "toml",
  "tui-event-controller",
+ "tui-theme-builder",
  "tui-widget-list",
  "uuid",
 ]
@@ -1074,35 +1079,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ratatheme"
-version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#b8d562ed9850b0172f49757c85e3aa69112289df"
-dependencies = [
- "ratatheme-derive",
- "ratatheme-internal",
-]
-
-[[package]]
-name = "ratatheme-derive"
-version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#b8d562ed9850b0172f49757c85e3aa69112289df"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "ratatheme-internal"
-version = "0.1.0"
-source = "git+https://github.com/preiter93/ratatheme.git#b8d562ed9850b0172f49757c85e3aa69112289df"
-dependencies = [
- "csscolorparser",
- "ratatui",
- "serde",
-]
-
-[[package]]
 name = "ratatui"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1117,6 +1093,7 @@ dependencies = [
  "itertools",
  "lru",
  "paste",
+ "serde",
  "strum",
  "unicode-segmentation",
  "unicode-truncate",
@@ -1424,6 +1401,38 @@ version = "0.1.0"
 source = "git+https://github.com/preiter93/tui-event-controller.git#9d456a625347ff6af477bd1f1e2b40bc7898ff93"
 dependencies = [
  "ratatui",
+]
+
+[[package]]
+name = "tui-theme-builder"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#19a84a3e9b348249fc2e7e72769f4d9c1dd41a51"
+dependencies = [
+ "tui-theme-builder-derive",
+ "tui-theme-builder-internal",
+]
+
+[[package]]
+name = "tui-theme-builder-derive"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#19a84a3e9b348249fc2e7e72769f4d9c1dd41a51"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "ratatui",
+ "serde",
+ "syn",
+ "tui-theme-builder-internal",
+]
+
+[[package]]
+name = "tui-theme-builder-internal"
+version = "0.1.0"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#19a84a3e9b348249fc2e7e72769f4d9c1dd41a51"
+dependencies = [
+ "csscolorparser",
+ "ratatui",
+ "serde",
 ]
 
 [[package]]

@@ -42,7 +42,7 @@ impl EventfulWidget<AppState, Event> for HomePage {
 impl HomePageState {
     pub(crate) fn new() -> Self {
         let theme = get_theme();
-        let bg = theme.base.style.bg.unwrap_or_default();
+        let bg = theme.base.bg.unwrap_or_default();
 
         Self {
             intro_effect: fx::fade_from_fg(bg, EffectTimer::from_ms(1000, Interpolation::Linear)),
@@ -85,12 +85,12 @@ impl StatefulWidgetRef for HomePage {
 
         Paragraph::new(figlet)
             .alignment(Alignment::Center)
-            .style(theme.base.style)
+            .style(theme.base)
             .render(title, buf);
 
         Line::from("Search and Browse Man Pages")
             .alignment(Alignment::Center)
-            .style(theme.base.style.italic())
+            .style(theme.base.italic())
             .render(subtitle, buf);
 
         if state.intro_effect.done() {
@@ -120,12 +120,8 @@ impl StatefulWidget for InstructionText {
                 Constraint::Min(0),
             ])
             .areas(area);
-        Line::from("Press ").style(theme.base.style).render(l, buf);
-        Line::from("Enter")
-            .style(theme.base.style.bold())
-            .render(m, buf);
-        Line::from(" to Continue")
-            .style(theme.base.style)
-            .render(r, buf);
+        Line::from("Press ").style(theme.base).render(l, buf);
+        Line::from("Enter").style(theme.base.bold()).render(m, buf);
+        Line::from(" to Continue").style(theme.base).render(r, buf);
     }
 }

@@ -45,34 +45,29 @@ pub(super) fn get_theme() -> &'static Theme {
 
 static THEME: OnceLock<Theme> = OnceLock::new();
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, ThemeBuilder)]
+#[builder(context=Colors)]
 pub(super) struct Theme {
-    pub(super) base: BaseStyle,
+    #[style(fg=white)]
+    pub(super) base: Style,
 
+    #[builder(subtheme)]
     pub(super) list: ListStyle,
 
+    #[builder(subtheme)]
     pub(super) search: SearchStyle,
 
+    #[builder(subtheme)]
     pub(super) block: BlockStyle,
 
+    #[builder(subtheme)]
     pub(super) highlight: HighlightStyle,
 }
 
 impl Default for Theme {
     fn default() -> Self {
         let colors = Colors::default();
-        let base = BaseStyle::build(&colors);
-        let list = ListStyle::build(&colors);
-        let search = SearchStyle::build(&colors);
-        let block = BlockStyle::build(&colors);
-        let highlight = HighlightStyle::build(&colors);
-        Self {
-            base,
-            list,
-            search,
-            block,
-            highlight,
-        }
+        Self::build(&colors)
     }
 }
 
@@ -87,13 +82,6 @@ pub(super) struct ListStyle {
 
     #[style(fg=charcoal, bg=red500)]
     pub(super) selected: Style,
-}
-
-#[derive(Debug, Default, Clone, ThemeBuilder)]
-#[builder(context=Colors)]
-pub(super) struct BaseStyle {
-    #[style(fg=white)]
-    pub(super) style: Style,
 }
 
 #[derive(Debug, Default, Clone, ThemeBuilder)]

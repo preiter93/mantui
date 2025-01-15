@@ -1,21 +1,13 @@
-#![allow(unused)]
-use serde::Deserialize;
-use tui_theme_builder::ThemeBuilder;
-
-use std::error::Error;
-use std::sync::OnceLock;
-use tachyonfx::HslConvertable;
-
 use ratatui::style::{Color, Style};
+use serde::Deserialize;
+use std::sync::OnceLock;
+use tui_theme_builder::ThemeBuilder;
 
 #[derive(Debug, Deserialize)]
 pub struct Colors {
     pub white: Color,
     pub black: Color,
-    pub gray300: Color,
     pub gray500: Color,
-    pub gray700: Color,
-    pub orange: Color,
     pub charcoal: Color,
     pub red500: Color,
     pub red700: Color,
@@ -51,16 +43,12 @@ pub(super) struct Theme {
     #[style(fg=white)]
     pub(super) base: Style,
 
-    #[builder(subtheme)]
     pub(super) list: ListStyle,
 
-    #[builder(subtheme)]
     pub(super) search: SearchStyle,
 
-    #[builder(subtheme)]
     pub(super) block: BlockStyle,
 
-    #[builder(subtheme)]
     pub(super) highlight: HighlightStyle,
 }
 

@@ -3,6 +3,8 @@ use serde::Deserialize;
 use std::sync::OnceLock;
 use tui_theme_builder::ThemeBuilder;
 
+use crate::args::Args;
+
 #[derive(Debug, Deserialize)]
 pub struct Colors {
     pub white: Color,
@@ -30,14 +32,14 @@ impl Default for Colors {
 
 #[must_use]
 pub(super) fn get_theme() -> &'static Theme {
-    THEME.get_or_init(Theme::default)
+    THEME.get().unwrap()
 }
 
-static THEME: OnceLock<Theme> = OnceLock::new();
+pub static THEME: OnceLock<Theme> = OnceLock::new();
 
 #[derive(Debug, Clone, ThemeBuilder)]
 #[builder(context=Colors)]
-pub(super) struct Theme {
+pub struct Theme {
     #[style(fg=white,bg=black)]
     pub(super) base: Style,
 
@@ -54,6 +56,16 @@ impl Default for Theme {
     fn default() -> Self {
         let colors = Colors::default();
         Self::build(&colors)
+    }
+}
+
+impl Theme {
+    pub fn init(args: &Args) -> Self {
+        let mut theme = Self::default();
+        if args.transparent {
+            theme.base = Style::default().fg(theme.base.fg.unwrap());
+        }
+        theme
     }
 }
 

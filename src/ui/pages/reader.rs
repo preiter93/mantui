@@ -57,7 +57,10 @@ impl ReaderPageState {
     pub(crate) fn new(command: &str, width: usize) -> Self {
         let reduced_width = (width as f64 * 0.9) as u16;
 
-        let ansi = read_command(command, &(format!("{reduced_width}"))).unwrap_or_default();
+        let ansi = match read_command(command, &(format!("{reduced_width}"))) {
+            Ok(ansi) => ansi,
+            Err(err) => panic!("failed to read command: {err}"),
+        };
         let text = ansi
             .into_text()
             .unwrap_or(Text::from("Could not convert ansi to tui."));

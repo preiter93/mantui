@@ -28,10 +28,10 @@ impl Reader {
 fn strip_section(command: &str) -> String {
     if command.ends_with(')') {
         if let Some(pos) = command.rfind('(') {
-            return command[..pos].to_string();
+            return command[..pos].trim().to_string();
         }
     }
-    command.to_string()
+    command.trim().to_string()
 }
 
 const ANSI_RESET: &str = "\x1B[0m";

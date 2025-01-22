@@ -65,6 +65,8 @@ impl StatefulWidgetRef for HomePage {
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
+        buf.set_style(area, theme.base);
+
         let figlet = r"                       _         _
  _ __ ___   __ _ _ __ | |_ _   _(_)
 | '_ ` _ \ / _` | '_ \| __| | | | |

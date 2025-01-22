@@ -250,12 +250,13 @@ impl StatefulWidgetRef for ReaderPage {
     type State = ReaderPageState;
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let theme = get_theme();
+        buf.set_style(area, theme.base);
+
         let [main, search] = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .areas(area);
-
-        let theme = get_theme();
 
         let style = if state.search_active {
             theme.block.inactive
@@ -377,10 +378,14 @@ impl StatefulWidgetRef for Content {
         let mut lines: Vec<Line> = Vec::new();
         for line in state.text.lines.clone() {
             let mut new_line: Vec<Span> = Vec::new();
-            for span in line {
+            for mut span in line {
                 if state.search_active {
                     new_line.push(span.style(style));
                 } else {
+                    if let Some(bg) = theme.base.bg {
+                        let style = span.style;
+                        span = span.style(style.bg(bg));
+                    }
                     new_line.push(span);
                 }
             }

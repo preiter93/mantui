@@ -235,6 +235,8 @@ impl StatefulWidgetRef for ListPage {
 
     fn render_ref(&self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let theme = get_theme();
+        buf.set_style(area, theme.base);
+
         state.page_width = area.width as usize;
 
         let [main, search] = Layout::default()

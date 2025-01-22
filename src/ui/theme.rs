@@ -7,24 +7,22 @@ use tui_theme_builder::ThemeBuilder;
 pub struct Colors {
     pub white: Color,
     pub black: Color,
-    pub gray500: Color,
+    pub gray: Color,
     pub charcoal: Color,
-    pub red500: Color,
-    pub red700: Color,
+    pub red: Color,
+    pub darkred: Color,
 }
 
 impl Default for Colors {
     fn default() -> Self {
         let s = r##"
         "white" = "white"
-        "black" = "black"
-        "gray300" = "#c0c0d8"
-        "gray500" = "#454554"
-        "gray700" = "#1c1c21"
+        "black" = "#101116"
+        "gray" = "#454554"
         "orange" = "#ff9900"
         "charcoal" = "#1c1c20"
-        "red500" = "#f5005e"
-        "red700" = "#a51d51"
+        "red" = "#f5005e"
+        "darkred" = "#a51d51"
         "##;
         toml::from_str(s).unwrap()
     }
@@ -40,7 +38,7 @@ static THEME: OnceLock<Theme> = OnceLock::new();
 #[derive(Debug, Clone, ThemeBuilder)]
 #[builder(context=Colors)]
 pub(super) struct Theme {
-    #[style(fg=white)]
+    #[style(fg=white,bg=black)]
     pub(super) base: Style,
 
     pub(super) list: ListStyle,
@@ -65,10 +63,10 @@ pub(super) struct ListStyle {
     #[style(fg=white)]
     pub(super) active: Style,
 
-    #[style(fg=gray500)]
+    #[style(fg=gray)]
     pub(super) inactive: Style,
 
-    #[style(fg=charcoal, bg=red500)]
+    #[style(fg=charcoal, bg=red)]
     pub(super) selected: Style,
 }
 
@@ -78,7 +76,7 @@ pub(super) struct SearchStyle {
     #[style(fg=white)]
     pub(super) active: Style,
 
-    #[style(fg=gray500)]
+    #[style(fg=gray)]
     pub(super) inactive: Style,
 }
 
@@ -88,16 +86,16 @@ pub(super) struct BlockStyle {
     #[style(fg=white)]
     pub(super) active: Style,
 
-    #[style(fg=gray500)]
+    #[style(fg=gray)]
     pub(super) inactive: Style,
 }
 
 #[derive(Debug, Default, Clone, ThemeBuilder)]
 #[builder(context=Colors)]
 pub(super) struct HighlightStyle {
-    #[style(fg=black, bg=red500)]
+    #[style(fg=black, bg=red)]
     pub(super) active: Style,
 
-    #[style(fg=black, bg=red700)]
+    #[style(fg=black, bg=darkred)]
     pub(super) inactive: Style,
 }

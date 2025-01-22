@@ -140,7 +140,7 @@ impl App<'_> {
         let initial_area = terminal.area();
 
         let controller = EventController::new();
-        spawn_event_loop(&controller, 50);
+        spawn_event_loop(&controller, 100);
 
         let mut app = Self::new();
         let mut state = AppState::new(initial_command, initial_area, &controller);

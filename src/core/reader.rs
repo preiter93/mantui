@@ -6,9 +6,13 @@ pub(crate) struct Reader;
 impl Reader {
     pub(super) fn read(command: &str, width: &str) -> Result<String> {
         let output = if cfg!(target_os = "macos") {
-            command_macos(command, width)?
+            command_macos(command, width)
+                .or_else(|_| command_macos(command.to_lowercase(), width))?
         } else {
-            command_linux(command, width).unwrap_or(command_macos(command, width)?)
+            command_linux(command, width)
+                .or_else(|_| command_linux(&command.to_lowercase(), width))
+                .or_else(|_| command_macos(command, width))
+                .or_else(|_| command_macos(command.to_lowercase(), width))?
         };
 
         let ansi = man_to_ansi(&output);
@@ -17,9 +21,9 @@ impl Reader {
     }
 }
 
-fn command_macos(command: &str, width: &str) -> Result<String> {
+fn command_macos<S: AsRef<str>>(command: S, width: &str) -> Result<String> {
     let output = Command::new("man")
-        .arg(strip_section(command))
+        .arg(strip_section(command.as_ref()))
         .env("MANWIDTH", width)
         .env("LC_ALL", "C")
         .output()?;

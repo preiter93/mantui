@@ -1,28 +1,50 @@
-use anyhow::Result;
-use std::{
-    io::Read,
-    process::{Command, Stdio},
-};
+use anyhow::{anyhow, Result};
+use std::process::Command;
 
 pub(crate) struct Reader;
 
 impl Reader {
     pub(super) fn read(command: &str, width: &str) -> Result<String> {
-        let process = Command::new("man")
-            .arg(strip_section(command))
-            .env("MANWIDTH", width)
-            .env("LC_ALL", "C")
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()?;
-
-        let mut output = String::new();
-        process.stdout.unwrap().read_to_string(&mut output)?;
+        let output = if cfg!(target_os = "macos") {
+            command_macos(command, width)?
+        } else {
+            command_linux(command, width).unwrap_or(command_macos(command, width)?)
+        };
 
         let ansi = man_to_ansi(&output);
 
         Ok(ansi)
     }
+}
+
+fn command_macos(command: &str, width: &str) -> Result<String> {
+    let output = Command::new("man")
+        .arg(strip_section(command))
+        .env("MANWIDTH", width)
+        .env("LC_ALL", "C")
+        .output()?;
+
+    if !output.status.success() {
+        return Err(anyhow!("command failed: {}", output.status));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+fn command_linux(command: &str, width: &str) -> Result<String> {
+    let output = Command::new("man")
+        .arg("-t")
+        .arg("-Tutf8")
+        .arg(strip_section(command))
+        .env("MANWIDTH", width)
+        .env("LC_ALL", "C")
+        .output()?;
+
+    if !output.status.success() {
+        return Err(anyhow!("command failed: {}", output.status));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
 fn strip_section(command: &str) -> String {

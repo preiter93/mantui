@@ -231,7 +231,10 @@ pub(crate) fn load_commands_in_background(ctx: &AppState, section: usize) {
         }
 
         // Load the commands after the debounce check
-        let commands = load_section(section_str).unwrap_or_default();
+        let commands = match load_section(section_str) {
+            Ok(commands) => commands,
+            Err(err) => panic!("failed to load section: {err}"),
+        };
 
         // Send the result
         let event = InternalEvent::Loaded((commands, section));

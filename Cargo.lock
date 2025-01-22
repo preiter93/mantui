@@ -1407,7 +1407,7 @@ dependencies = [
 [[package]]
 name = "tui-theme-builder"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/tui-theme-builder.git#79ba27e887ab2b2bd9009ddd58cc1157bc5c05eb"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#cb3da35bbee10f3be346ad501a87566e97603125"
 dependencies = [
  "tui-theme-builder-derive",
  "tui-theme-builder-internal",
@@ -1416,7 +1416,7 @@ dependencies = [
 [[package]]
 name = "tui-theme-builder-derive"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/tui-theme-builder.git#79ba27e887ab2b2bd9009ddd58cc1157bc5c05eb"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#cb3da35bbee10f3be346ad501a87566e97603125"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1429,7 +1429,7 @@ dependencies = [
 [[package]]
 name = "tui-theme-builder-internal"
 version = "0.1.0"
-source = "git+https://github.com/preiter93/tui-theme-builder.git#79ba27e887ab2b2bd9009ddd58cc1157bc5c05eb"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#cb3da35bbee10f3be346ad501a87566e97603125"
 dependencies = [
  "csscolorparser",
  "ratatui",

@@ -192,10 +192,10 @@ impl EventfulWidget<AppState, Event> for ReaderPage {
                     state.matches = find_matches(&state.text, &state.search);
                     state.select_next_search();
                 }
-                KeyCode::Char('j') => {
+                KeyCode::Char('j') | KeyCode::Down => {
                     state.scroll_down();
                 }
-                KeyCode::Char('k') => {
+                KeyCode::Char('k') | KeyCode::Up => {
                     state.scroll_up();
                 }
                 KeyCode::Char('d') if event.modifiers == KeyModifiers::CONTROL => {

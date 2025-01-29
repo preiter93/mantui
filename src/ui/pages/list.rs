@@ -54,7 +54,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
         };
 
         match key.code {
-            KeyCode::Char('j') if !page_state.search_active => {
+            KeyCode::Char('j') | KeyCode::Down if !page_state.search_active => {
                 if page_state.section_active {
                     let s = min(page_state.section_list.selected.unwrap() + 1, 8);
                     select_section!(page_state, state, s);
@@ -62,7 +62,7 @@ impl EventfulWidget<AppState, Event> for ListPage {
                     page_state.scroll_down();
                 }
             }
-            KeyCode::Char('k') if !page_state.search_active => {
+            KeyCode::Char('k') | KeyCode::Up if !page_state.search_active => {
                 if page_state.section_active {
                     let s = page_state.section_list.selected.unwrap().saturating_sub(1);
                     select_section!(page_state, state, s);

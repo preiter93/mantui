@@ -10,9 +10,7 @@ pub struct Colors {
     pub white: Color,
     pub black: Color,
     pub gray: Color,
-    pub charcoal: Color,
-    pub red: Color,
-    pub darkred: Color,
+    pub orange: Color,
 }
 
 impl Default for Colors {
@@ -21,10 +19,9 @@ impl Default for Colors {
         "white" = "white"
         "black" = "#101116"
         "gray" = "#454554"
-        "orange" = "#ff9900"
+        "lightorange" = "#e0af67"
+        "orange" = "#f89a63"
         "charcoal" = "#1c1c20"
-        "red" = "#f5005e"
-        "darkred" = "#a51d51"
         "##;
         toml::from_str(s).unwrap()
     }
@@ -78,7 +75,7 @@ pub(super) struct ListStyle {
     #[style(fg=gray)]
     pub(super) inactive: Style,
 
-    #[style(fg=charcoal, bg=red)]
+    #[style(fg=black, bg=orange)]
     pub(super) selected: Style,
 }
 
@@ -105,9 +102,9 @@ pub(super) struct BlockStyle {
 #[derive(Debug, Default, Clone, ThemeBuilder)]
 #[builder(context=Colors)]
 pub(super) struct HighlightStyle {
-    #[style(fg=black, bg=red)]
+    #[style(fg=black, bg=orange)]
     pub(super) active: Style,
 
-    #[style(fg=black, bg=darkred)]
+    #[style(fg=black, bg=orange)]
     pub(super) inactive: Style,
 }

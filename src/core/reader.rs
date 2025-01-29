@@ -61,15 +61,16 @@ fn strip_section(command: &str) -> String {
 }
 
 const ANSI_RESET: &str = "\x1B[0m";
+#[allow(unused)]
 const ANSI_BOLD: &str = "\x1B[1m";
 #[allow(unused)]
 const ANSI_ITALIC: &str = "\x1B[3m";
 #[allow(unused)]
 const ANSI_UNDERLINE: &str = "\x1B[4m";
 
-const ANSI_RED: &str = "\x1B[31m";
-#[allow(unused)]
-const ANSI_GREEN: &str = "\x1B[32m";
+const ANSI_ORANGE: &str = "\x1B[38;2;248;154;99m";
+
+const ANSI_PURPLE: &str = "\x1b[38;2;152;120;209m";
 
 enum Format {
     None,
@@ -97,10 +98,10 @@ fn man_to_ansi(input: &str) -> String {
             ('\u{8}', Some(ch)) => {
                 match active_format {
                     Format::Bold => {
-                        result.push_str(&formatted_char(*ch, ANSI_BOLD));
+                        result.push_str(&formatted_char(*ch, ANSI_PURPLE));
                     }
                     Format::Underline => {
-                        result.push_str(&formatted_char(*ch, ANSI_RED));
+                        result.push_str(&formatted_char(*ch, ANSI_ORANGE));
                     }
                     Format::None => {}
                 }
@@ -122,8 +123,8 @@ fn formatted_char(ch: char, format: &str) -> String {
 }
 
 fn remove_redundant_ansi(result: &mut String) {
-    *result = result.replace(&format!("{ANSI_RESET}{ANSI_BOLD}"), "");
-    *result = result.replace(&format!("{ANSI_RESET}{ANSI_RED}"), "");
+    *result = result.replace(&format!("{ANSI_RESET}{ANSI_PURPLE}"), "");
+    *result = result.replace(&format!("{ANSI_RESET}{ANSI_ORANGE}"), "");
 }
 
 #[cfg(test)]
@@ -137,7 +138,7 @@ mod test {
 
         assert_eq!(
             ansi,
-            String::from(format!("COMMAND {ANSI_BOLD}NAME{ANSI_RESET}"))
+            String::from(format!("COMMAND {ANSI_PURPLE}NAME{ANSI_RESET}"))
         );
     }
 
@@ -146,6 +147,6 @@ mod test {
         let man = "_\u{8}N_\u{8}A_\u{8}M_\u{8}E";
         let ansi = man_to_ansi(man);
 
-        assert_eq!(ansi, String::from(format!("{ANSI_RED}NAME{ANSI_RESET}")));
+        assert_eq!(ansi, String::from(format!("{ANSI_ORANGE}NAME{ANSI_RESET}")));
     }
 }

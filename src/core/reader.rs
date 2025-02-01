@@ -38,7 +38,7 @@ fn command_macos<S: AsRef<str>>(command: S, width: &str) -> Result<String> {
 fn command_linux(command: &str, width: &str) -> Result<String> {
     let output = Command::new("man")
         .arg("-t")
-        .arg("-Tutf8")
+        .arg("-Tascii")
         .arg(strip_section(command))
         .env("MANWIDTH", width)
         .env("LC_ALL", "C")

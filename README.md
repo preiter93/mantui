@@ -32,6 +32,13 @@ mantui tar
 
 Browse through sections and search through a list of man pages.
 
+## Linux
+
+On linux you may have to index the man pages first
+```bash
+sudo mandb
+```
+
 ![](assets/selection.png)
 
 Read the man pages. Supports scrolling with the mouse and highlighting/copying text.

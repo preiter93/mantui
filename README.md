@@ -47,3 +47,7 @@ Read the man pages. Supports scrolling with the mouse and highlighting/copying t
 | Search                         | `/`                    |
 | Go back                        | `Esc`                  |
 | Select                         | `Enter`                |
+
+## Troubleshooting
+
+- You see a large chunk of a man page underlined? Check if you have exported some configuration for less, e.g. `LESS_TERMCAP`, see [this issue](https://github.com/preiter93/mantui/issues/2).

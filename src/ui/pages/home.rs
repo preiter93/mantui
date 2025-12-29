@@ -10,7 +10,7 @@ use ratatui::{
     widgets::{Paragraph, StatefulWidgetRef},
 };
 use std::time::Instant;
-use tachyonfx::{fx, CenteredShrink, Effect, EffectTimer, Interpolation, Shader};
+use tachyonfx::{fx, CenteredShrink, Effect, EffectTimer, Interpolation};
 
 #[derive(Default, Clone)]
 pub(crate) struct HomePage {}

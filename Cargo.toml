@@ -14,7 +14,7 @@ clap = { version = "4.5.23", features = ["derive"] }
 ratatui = { version = "0.30.0", features = ["unstable-widget-ref", "serde"] }
 tachyonfx = { version = "0.22", features = ["std-duration"] }
 tui-widget-list = "0.14"
-tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
+tokio = { version = ">=1.43.1", features = ["rt", "macros", "rt-multi-thread"] }
 ansi-to-tui = "8.0.0"
 throbber-widgets-tui = "0.10.0"
 uuid = { version = "1.11.0", features = ["v4"] }

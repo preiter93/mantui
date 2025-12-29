@@ -22,4 +22,4 @@ arboard = "3.4.1"
 tui-event-controller = { version = "0.2.0", git = "https://github.com/preiter93/tui-event-controller.git" }
 serde = { version = "1.0" }
 tui-theme-builder = { version = "0.2.0", git = "https://github.com/preiter93/tui-theme-builder.git" }
-toml = "0.8"
+toml = "0.9"

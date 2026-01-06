@@ -10,7 +10,7 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0.95"
 chrono = { version = "0.4.38", features = ["serde"] }
-clap = { version = "4.5.23", features = ["derive"] }
+clap = { version = "4.5.54", features = ["derive"] }
 ratatui = { version = "0.30.0", features = ["unstable-widget-ref", "serde"] }
 tachyonfx = { version = "0.22", features = ["std-duration"] }
 tui-widget-list = "0.14"

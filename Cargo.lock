@@ -87,7 +87,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -98,7 +98,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -263,9 +263,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chrono"
-version = "0.4.42"
+version = "0.4.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2"
+checksum = "fac4744fb15ae8337dc853fee7fb3f4e48c0fbaa23d0afe49c447b4fab126118"
 dependencies = [
  "iana-time-zone",
  "js-sys",
@@ -614,7 +614,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -1637,7 +1637,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2074,8 +2074,8 @@ dependencies = [
 
 [[package]]
 name = "tui-theme-builder"
-version = "0.2.1"
-source = "git+https://github.com/preiter93/tui-theme-builder.git#fab317608770727838bdd3d5483bfb0bbd9e55b1"
+version = "0.2.2"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#de8bc08d766337bfcd88c8f63e151d4be7919794"
 dependencies = [
  "tui-theme-builder-derive",
  "tui-theme-builder-internal",
@@ -2083,8 +2083,8 @@ dependencies = [
 
 [[package]]
 name = "tui-theme-builder-derive"
-version = "0.2.1"
-source = "git+https://github.com/preiter93/tui-theme-builder.git#fab317608770727838bdd3d5483bfb0bbd9e55b1"
+version = "0.2.2"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#de8bc08d766337bfcd88c8f63e151d4be7919794"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2096,8 +2096,8 @@ dependencies = [
 
 [[package]]
 name = "tui-theme-builder-internal"
-version = "0.2.1"
-source = "git+https://github.com/preiter93/tui-theme-builder.git#fab317608770727838bdd3d5483bfb0bbd9e55b1"
+version = "0.2.2"
+source = "git+https://github.com/preiter93/tui-theme-builder.git#de8bc08d766337bfcd88c8f63e151d4be7919794"
 dependencies = [
  "csscolorparser 0.7.2",
  "serde",

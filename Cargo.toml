@@ -17,7 +17,7 @@ tui-widget-list = "0.15"
 tokio = { version = ">=1.43.1", features = ["rt", "macros", "rt-multi-thread"] }
 ansi-to-tui = "8.0.1"
 throbber-widgets-tui = "0.10.0"
-uuid = { version = "1.11.0", features = ["v4"] }
+uuid = { version = "1.20.0", features = ["v4"] }
 arboard = "3.4.1"
 tui-event-controller = { version = "0.2.0", git = "https://github.com/preiter93/tui-event-controller.git" }
 serde = { version = "1.0" }

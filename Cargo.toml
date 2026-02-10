@@ -8,9 +8,9 @@ keywords = ["man", "pages", "ratatui", "tui"]
 license = "MIT"
 
 [dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.101"
 chrono = { version = "0.4.43", features = ["serde"] }
-clap = { version = "4.5.56", features = ["derive"] }
+clap = { version = "4.5.57", features = ["derive"] }
 ratatui = { version = "0.30.0", features = ["unstable-widget-ref", "serde"] }
 tachyonfx = { version = "0.23", features = ["std-duration"] }
 tui-widget-list = "0.15"

@@ -10,16 +10,16 @@ license = "MIT"
 [dependencies]
 anyhow = "1.0.101"
 chrono = { version = "0.4.43", features = ["serde"] }
-clap = { version = "4.5.57", features = ["derive"] }
+clap = { version = "4.5.58", features = ["derive"] }
 ratatui = { version = "0.30.0", features = ["unstable-widget-ref", "serde"] }
-tachyonfx = { version = "0.23", features = ["std-duration"] }
+tachyonfx = { version = "0.24", features = ["std-duration"] }
 tui-widget-list = "0.15"
 tokio = { version = ">=1.43.1", features = ["rt", "macros", "rt-multi-thread"] }
 ansi-to-tui = "8.0.1"
 throbber-widgets-tui = "0.10.0"
-uuid = { version = "1.20.0", features = ["v4"] }
+uuid = { version = "1.21.0", features = ["v4"] }
 arboard = "3.4.1"
 tui-event-controller = { version = "0.2.0", git = "https://github.com/preiter93/tui-event-controller.git" }
 serde = { version = "1.0" }
 tui-theme-builder = { version = "0.2.0", git = "https://github.com/preiter93/tui-theme-builder.git" }
-toml = "0.9"
+toml = "1.0"

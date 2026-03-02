@@ -12,7 +12,7 @@ anyhow = "1.0.102"
 chrono = { version = "0.4.44", features = ["serde"] }
 clap = { version = "4.5.60", features = ["derive"] }
 ratatui = { version = "0.30.0", features = ["unstable-widget-ref", "serde"] }
-tachyonfx = { version = "0.24", features = ["std-duration"] }
+tachyonfx = { version = "0.25", features = ["std-duration"] }
 tui-widget-list = "0.15"
 tokio = { version = ">=1.43.1", features = ["rt", "macros", "rt-multi-thread"] }
 ansi-to-tui = "8.0.1"
